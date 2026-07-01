@@ -1,5 +1,5 @@
 /*
- * i2c.c — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 5 (Финал)
+ * i2c.c — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 5.3 (С учетом ревью)
  */
 
 #include "i2c.h"
@@ -10,10 +10,10 @@
 #define RCC_APB1PCENR_I2C1EN  (1 << 21)  /* I2C1 clock enable */
 
 /* GPIO: AF_OD (Alternate Function Open-Drain) + 50MHz */
-#define GPIO_CFG_AF_OD_50M  0x0F
+#define GPIO_CFG_AF_OD_50M   0x0F
 
 /* Конфигурация выходов для режима восстановления (General Purpose Open-Drain, 2MHz) */
-#define GPIO_CFG_OUT_OD_2M  0x06
+#define GPIO_CFG_OUT_OD_2M   0x06
 
 /* Маски для CKCFGR */
 #define CKCFGR_FS_Set    ((uint16_t)0x8000)  /* Bit 15: F/S (0=Standard, 1=Fast) */
@@ -26,7 +26,7 @@
 #define I2C_SCL_PULSE_DELAY    80
 
 /* Лимит последовательных КРИТИЧЕСКИХ ХАРДВЕРНЫХ ошибок перед восстановлением шины */
-#define MAX_ERROR_COUNT        5
+#define MAX_ERROR_COUNT        2
 
 /* Глобальные статические переменные драйвера */
 static uint32_t i2c_speed = 100000;
@@ -46,7 +46,7 @@ static inline void i2c_delay(void) {
 }
 
 /**
- * @brief Фиксация аппаратных критических ошибок (ARLO, BERR). Исключает программные таймауты.
+ * @brief Фиксация аппаратных критических ошибок (ARLO, BERR).
  */
 static inline void handle_critical_error(void) {
     consecutive_errors++;
@@ -56,25 +56,23 @@ static inline void handle_critical_error(void) {
 }
 
 /**
- * @brief Вспомогательная функция полной конфигурации регистров тактирования I2C.
+ * @brief Вспомогательная функция конфигурации регистров тактирования I2C
  */
 static void i2c_configure_registers(void) {
-    I2C1->CTLR2 = APB1_FREQ_MHZ;
+    uint32_t pclk1 = SystemCoreClock;
+    uint32_t freq_mhz = pclk1 / 1000000UL;
+    I2C1->CTLR2 = freq_mhz;
 
     uint16_t ccr_val;
     uint16_t fs_bit = 0;
 
     if (i2c_speed <= 100000) {
-        /* Standard Mode: CCR = PCLK1 / (2 × FI2C) */
-        ccr_val = PCLK1_HZ / (i2c_speed * 2);
+        ccr_val = pclk1 / (i2c_speed * 2);
         if (ccr_val < 4) ccr_val = 4;
-        I2C1->TRISE = TRISE_STD;
     } else {
-        /* Fast Mode (Duty=2): CCR = PCLK1 / (3 × FI2C) */
-        ccr_val = PCLK1_HZ / (i2c_speed * 3);
+        ccr_val = pclk1 / (i2c_speed * 3);
         if (ccr_val == 0) ccr_val = 1;
         fs_bit = CKCFGR_FS_Set;
-        I2C1->TRISE = TRISE_FAST;
     }
     
     if (ccr_val > CKCFGR_CCR_Set) {
@@ -95,6 +93,10 @@ static void i2c_bus_recovery(void) {
     /* 2. Переводим SCL (PC2) и SDA (PC1) в режим обычного выхода Open-Drain 2MHz */
     GPIOC->CFGLR &= ~((0xF << 4) | (0xF << 8));
     GPIOC->CFGLR |=  (GPIO_CFG_OUT_OD_2M << 4) | (GPIO_CFG_OUT_OD_2M << 8);
+    
+    /* Инициализируем линии в состояние HIGH (отпущены) сразу после переключения */
+    GPIOC->BSHR = (1 << 1) | (1 << 2);
+    i2c_delay();
 
     /* 3. Генерируем до 16 тактов SCL с контролем Clock Stretching */
     for (uint8_t i = 0; i < 16; i++) {
@@ -125,8 +127,8 @@ static void i2c_bus_recovery(void) {
     i2c_delay();
 
     /* 5. Выполняем Software Reset (SWRST) очищенного блока I2C */
-    I2C1->CTLR1 |= (1 << 15);  /* SWRST = 1 */
-    I2C1->CTLR1 &= ~(1 << 15); /* SWRST = 0 */
+    I2C1->CTLR1 |= I2C_CTLR1_SWRST;
+    I2C1->CTLR1 &= ~I2C_CTLR1_SWRST;
 
     /* 6. Возвращаем GPIO обратно в режим альтернативной функции Open-Drain (AF_OD) */
     GPIOC->CFGLR &= ~((0xF << 4) | (0xF << 8));
@@ -141,38 +143,46 @@ static void i2c_bus_recovery(void) {
     /* Атомарный безопасный сброс флагов ошибок прямой записью инвертированной маски */
     I2C1->STAR1 = (uint16_t)~(I2C_STAR1_AF | I2C_STAR1_ARLO | I2C_STAR1_BERR);
     
+    /* Ожидание очистки аппаратного флага BUSY цифровым фильтром периферии */
+    uint32_t busy_timeout = I2C_TIMEOUT;
+    while ((I2C1->STAR2 & I2C_STAR2_BUSY) && --busy_timeout);
+    
     consecutive_errors = 0;
 }
 
 /**
- * @brief Инициализация I2C1
+ * @brief Полная и безопасная инициализация I2C1 на CH32V003
  */
 void i2c_init(uint32_t bound) {
     i2c_speed = bound;
 
+    // 1. Включаем тактирование Порта C и самого блока I2C1
     RCC->APB2PCENR |= RCC_APB2PCENR_IOPCEN;
     RCC->APB1PCENR |= RCC_APB1PCENR_I2C1EN;
 
-    GPIOC->CFGLR &= ~((0xF << 4) | (0xF << 8));
-    GPIOC->CFGLR |=  (GPIO_CFG_AF_OD_50M << 4) | (GPIO_CFG_AF_OD_50M << 8);
+    // 2. Конфигурируем PC1 (SDA) и PC2 (SCL) как Alternate Function Open-Drain (50MHz)
+    GPIOC->CFGLR &= ~((0x0F << 4) | (0x0F << 8));
+    GPIOC->CFGLR |=  ((0x0F << 4) | (0x0F << 8));
 
-    I2C1->CTLR1 |= (1 << 15);  /* SWRST = 1 */
-    I2C1->CTLR1 &= ~(1 << 15); /* SWRST = 0 */
+    // 3. Сбрасываем и очищаем автомат I2C через SWRST
+    I2C1->CTLR1 |= I2C_CTLR1_SWRST;
+    I2C1->CTLR1 &= ~I2C_CTLR1_SWRST;
 
+    // 4. Расчет и запись делителей скорости
     i2c_configure_registers();
 
-    I2C1->CTLR1 = I2C_CTLR1_PE | I2C_CTLR1_ACK;
-    consecutive_errors = 0;
+    // 5. Окончательно включаем периферию I2C + авто-ACK
+    I2C1->CTLR1 |= (I2C_CTLR1_PE | I2C_CTLR1_ACK);
 }
 
 /**
- * @brief Ожидание освобождения шины I2C (флаг BUSY=0) с мгновенным вызовом recovery при таймауте
+ * @brief Ожидание освобождения шины I2C (флаг BUSY=0)
  */
 uint8_t i2c_wait_bus_free(void) {
     uint32_t timeout = I2C_TIMEOUT;
     while (I2C1->STAR2 & I2C_STAR2_BUSY) {
         if (--timeout == 0) {
-            i2c_bus_recovery(); /* Мгновенный сброс, зависание недопустимо */
+            i2c_bus_recovery();
             return I2C_NACK;
         }
     }
@@ -200,7 +210,7 @@ uint8_t i2c_start(void) {
         }
         if (--timeout == 0) {
             I2C1->CTLR1 &= ~I2C_CTLR1_START;
-            i2c_bus_recovery(); /* Программный таймаут -> жесткий сброс шины */
+            i2c_bus_recovery();
             return I2C_NACK;
         }
     }
@@ -232,7 +242,7 @@ uint8_t i2c_repeated_start(void) {
 }
 
 /**
- * @brief Генерация STOP условия с собственным таймаутом и мгновенным recovery
+ * @brief Генерация STOP условия с собственным таймаутом
  */
 void i2c_stop(void) {
     I2C1->CTLR1 |= I2C_CTLR1_STOP;
@@ -251,37 +261,36 @@ void i2c_stop(void) {
 }
 
 /**
- * @brief Отправка 7-битного адреса ведомого
+ * @brief Отправка адреса с автоматическим контролем ACK/NACK
  */
 uint8_t i2c_send_addr(uint8_t addr, uint8_t direction) {
-    I2C1->DATAR = (addr << 1) | (direction & 0x01);
-    uint32_t timeout = I2C_TIMEOUT;
-    while (!(I2C1->STAR1 & I2C_STAR1_ADDR)) {
-        uint16_t star1 = I2C1->STAR1;
-        if (star1 & (I2C_STAR1_BERR | I2C_STAR1_ARLO)) {
-            I2C1->STAR1 = (uint16_t)~(I2C_STAR1_BERR | I2C_STAR1_ARLO);
-            i2c_stop();
-            handle_critical_error();
-            return I2C_NACK;
-        }
-        if (star1 & I2C_STAR1_AF) {
-            I2C1->STAR1 = (uint16_t)~I2C_STAR1_AF;
-            i2c_stop();
-            return I2C_NACK;
-        }
+    /* Проверяем и сбрасываем флаг AF перед отправкой адреса */
+    if (I2C1->STAR1 & I2C_STAR1_AF) {
+        I2C1->STAR1 = (uint16_t)~I2C_STAR1_AF;
+    }
+    
+    I2C1->DATAR = (addr << 1) | direction;
+
+    uint32_t timeout = I2C_TIMEOUT; /* Заменено фиксированное число на единую константу */
+    while (!(I2C1->STAR1 & (I2C_STAR1_ADDR | I2C_STAR1_AF))) {
         if (--timeout == 0) {
-            i2c_stop();
-            i2c_bus_recovery();
             return I2C_NACK;
         }
     }
+
+    if (I2C1->STAR1 & I2C_STAR1_AF) {
+        I2C1->STAR1 = (uint16_t)~I2C_STAR1_AF; 
+        return I2C_NACK;
+    }
+
     (void)I2C1->STAR1;
     (void)I2C1->STAR2;
+
     return I2C_OK;
 }
 
 /**
- * @brief Отправка одного байта данных (Ожидает только TXE!)
+ * @brief Низкоуровневая отправка одного байта данных
  */
 uint8_t i2c_send_byte(uint8_t data) {
     I2C1->DATAR = data;
@@ -333,12 +342,14 @@ uint8_t i2c_wait_ack(void) {
         return I2C_NACK;
     }
     
-    consecutive_errors = 0; /* Полный успех сбрасывает счетчик ошибок */
+    consecutive_errors = 0;
     return I2C_OK;
 }
 
 /**
  * @brief Запись в одиночный 8-битный регистр устройства
+ * @note При любых внутренних ошибках записи, функции i2c_send_byte/i2c_wait_ack 
+ * самостоятельно генерируют STOP-условие, предотвращая зависание шины.
  */
 uint8_t i2c_write_register(uint8_t dev_addr, uint8_t reg_addr, uint8_t value) {
     if (i2c_start() != I2C_OK) return I2C_NACK;
@@ -352,7 +363,7 @@ uint8_t i2c_write_register(uint8_t dev_addr, uint8_t reg_addr, uint8_t value) {
 }
 
 /**
- * @brief Чтение одиночного 8-битного регистра устройств с принудительной защитой ACK при таймауте
+ * @brief Чтение одиночного 8-битного регистра
  */
 uint8_t i2c_read_register(uint8_t dev_addr, uint8_t reg_addr, uint8_t *p_value) {
     if (i2c_start() != I2C_OK) return I2C_NACK;
@@ -360,39 +371,43 @@ uint8_t i2c_read_register(uint8_t dev_addr, uint8_t reg_addr, uint8_t *p_value) 
     if (i2c_write_byte(reg_addr) != I2C_OK) return I2C_NACK;
     
     if (i2c_repeated_start() != I2C_OK) return I2C_NACK;
-    if (i2c_send_addr(dev_addr, I2C_DIR_RX) != I2C_OK) return I2C_NACK;
     
     I2C1->CTLR1 &= ~I2C_CTLR1_ACK;
+    
+    if (i2c_send_addr(dev_addr, I2C_DIR_RX) != I2C_OK) {
+        I2C1->CTLR1 |= I2C_CTLR1_ACK; /* Исправлено: Гарантированный возврат ACK при ошибке */
+        return I2C_NACK;
+    }
+    
     I2C1->CTLR1 |= I2C_CTLR1_STOP;
     
     uint32_t timeout = I2C_TIMEOUT;
     while (!(I2C1->STAR1 & I2C_STAR1_RXNE)) {
         if (--timeout == 0) {
-            I2C1->CTLR1 |= I2C_CTLR1_ACK; /* Восстанавливаем ACK перед выходом! */
+            I2C1->CTLR1 |= I2C_CTLR1_ACK; /* Исправлено: Гарантированный возврат ACK при таймауте */
             i2c_bus_recovery();
             return I2C_NACK;
         }
     }
     
     *p_value = (uint8_t)I2C1->DATAR;
+    
     I2C1->CTLR1 |= I2C_CTLR1_ACK;
     return I2C_OK;
 }
 
 /**
- * @brief Пакетная последовательная запись буфера в целевой регистр устройства (Симметрия API)
+ * @brief Пакетная последовательная запись буфера
  */
 uint8_t i2c_write_buffer(uint8_t dev_addr, uint8_t reg_addr, const uint8_t *p_buf, uint16_t len) {
     if (i2c_start() != I2C_OK) return I2C_NACK;
     if (i2c_send_addr(dev_addr, I2C_DIR_TX) != I2C_OK) return I2C_NACK;
     
-    /* Отправляем адрес начального регистра */
     if (i2c_write_byte(reg_addr) != I2C_OK) return I2C_NACK;
     
-    /* Потоковая передача массива данных с непрерывным побайтовым контролем ACK */
     for (uint16_t i = 0; i < len; i++) {
         if (i2c_write_byte(p_buf[i]) != I2C_OK) {
-            return I2C_NACK; /* Прерывание транзакции при NACK */
+            return I2C_NACK;
         }
     }
     
@@ -401,7 +416,7 @@ uint8_t i2c_write_buffer(uint8_t dev_addr, uint8_t reg_addr, const uint8_t *p_bu
 }
 
 /**
- * @brief Пакетное последовательное чтение буфера из регистра (Полная защита ACK во всех ветках)
+ * @brief Пакетное последовательное чтение буфера из регистра
  */
 uint8_t i2c_read_buffer(uint8_t dev_addr, uint8_t reg_addr, uint8_t *p_buf, uint16_t len) {
     if (len == 0) return I2C_OK;
@@ -411,94 +426,98 @@ uint8_t i2c_read_buffer(uint8_t dev_addr, uint8_t reg_addr, uint8_t *p_buf, uint
     if (i2c_write_byte(reg_addr) != I2C_OK) return I2C_NACK;
     
     if (i2c_repeated_start() != I2C_OK) return I2C_NACK;
-    if (i2c_send_addr(dev_addr, I2C_DIR_RX) != I2C_OK) return I2C_NACK;
-
-    I2C1->CTLR1 |= I2C_CTLR1_ACK;
 
     if (len == 1) {
         I2C1->CTLR1 &= ~I2C_CTLR1_ACK;
+        if (i2c_send_addr(dev_addr, I2C_DIR_RX) != I2C_OK) {
+            I2C1->CTLR1 |= I2C_CTLR1_ACK;
+            return I2C_NACK;
+        }
         I2C1->CTLR1 |= I2C_CTLR1_STOP;
         
         uint32_t timeout = I2C_TIMEOUT;
         while (!(I2C1->STAR1 & I2C_STAR1_RXNE)) {
             if (--timeout == 0) {
-                I2C1->CTLR1 |= I2C_CTLR1_ACK; /* Восстановление */
+                I2C1->CTLR1 |= I2C_CTLR1_ACK;
                 i2c_bus_recovery();
                 return I2C_NACK;
             }
         }
         p_buf[0] = (uint8_t)I2C1->DATAR;
-    } 
-    else if (len == 2) {
-        uint32_t timeout = I2C_TIMEOUT;
-        while (!(I2C1->STAR1 & I2C_STAR1_BTF)) {
-            if (--timeout == 0) {
-                I2C1->CTLR1 |= I2C_CTLR1_ACK; /* Восстановление */
-                i2c_bus_recovery();
-                return I2C_NACK;
-            }
-        }
-        I2C1->CTLR1 &= ~I2C_CTLR1_ACK;
-        I2C1->CTLR1 |= I2C_CTLR1_STOP;
-        
-        p_buf[0] = (uint8_t)I2C1->DATAR;
-        p_buf[1] = (uint8_t)I2C1->DATAR;
     } 
     else {
-        /* Для длинных пакетов N >= 3 (например, чтение FIFO APDS-9960) */
-        for (uint16_t i = 0; i < len; i++) {
-            
-            if (i == len - 3) {
-                uint32_t timeout = I2C_TIMEOUT;
-                while (!(I2C1->STAR1 & I2C_STAR1_BTF)) {
-                    if (--timeout == 0) {
-                        I2C1->CTLR1 |= I2C_CTLR1_ACK; /* Восстановление */
-                        i2c_bus_recovery();
-                        return I2C_NACK;
-                    }
-                }
-                
-                I2C1->CTLR1 &= ~I2C_CTLR1_ACK; /* Байт N-2 прочитан, ACK выключаем */
-                p_buf[i++] = (uint8_t)I2C1->DATAR;
-                
-                timeout = I2C_TIMEOUT;
-                while (!(I2C1->STAR1 & I2C_STAR1_BTF)) {
-                    if (--timeout == 0) {
-                        I2C1->CTLR1 |= I2C_CTLR1_ACK; /* Восстановление */
-                        i2c_bus_recovery();
-                        return I2C_NACK;
-                    }
-                }
-                
-                I2C1->CTLR1 |= I2C_CTLR1_STOP; /* Выставляем STOP перед последним байтом */
-                p_buf[i++] = (uint8_t)I2C1->DATAR;
-                
-                timeout = I2C_TIMEOUT;
-                while (!(I2C1->STAR1 & I2C_STAR1_RXNE)) {
-                    if (--timeout == 0) {
-                        I2C1->CTLR1 |= I2C_CTLR1_ACK; /* Восстановление */
-                        i2c_bus_recovery();
-                        return I2C_NACK;
-                    }
-                }
-                
-                p_buf[i] = (uint8_t)I2C1->DATAR;
-                break;
-            }
-            
+        I2C1->CTLR1 |= I2C_CTLR1_ACK;
+        if (i2c_send_addr(dev_addr, I2C_DIR_RX) != I2C_OK) return I2C_NACK;
+
+        if (len == 2) {
             uint32_t timeout = I2C_TIMEOUT;
-            while (!(I2C1->STAR1 & I2C_STAR1_RXNE)) {
+            while (!(I2C1->STAR1 & I2C_STAR1_BTF)) {
                 if (--timeout == 0) {
-                    I2C1->CTLR1 |= I2C_CTLR1_ACK; /* Восстановление */
+                    I2C1->CTLR1 |= I2C_CTLR1_ACK; /* Исправлено: Возврат ACK при ошибке ожидания BTF */
                     i2c_bus_recovery();
                     return I2C_NACK;
                 }
             }
-            p_buf[i] = (uint8_t)I2C1->DATAR;
+            I2C1->CTLR1 &= ~I2C_CTLR1_ACK;
+            I2C1->CTLR1 |= I2C_CTLR1_STOP;
+            
+            p_buf[0] = (uint8_t)I2C1->DATAR;
+            p_buf[1] = (uint8_t)I2C1->DATAR;
+        } 
+        else {
+            for (uint16_t i = 0; i < len; i++) {
+                if (i == len - 3) {
+                    uint32_t timeout = I2C_TIMEOUT;
+                    while (!(I2C1->STAR1 & I2C_STAR1_BTF)) {
+                        if (--timeout == 0) {
+                            I2C1->CTLR1 |= I2C_CTLR1_ACK; /* Исправлено: Возврат ACK */
+                            i2c_bus_recovery();
+                            return I2C_NACK;
+                        }
+                    }
+                    
+                    I2C1->CTLR1 &= ~I2C_CTLR1_ACK;
+                    p_buf[i++] = (uint8_t)I2C1->DATAR;
+                    
+                    timeout = I2C_TIMEOUT;
+                    while (!(I2C1->STAR1 & I2C_STAR1_BTF)) {
+                        if (--timeout == 0) {
+                            I2C1->CTLR1 |= I2C_CTLR1_ACK; /* Исправлено: Возврат ACK */
+                            i2c_bus_recovery();
+                            return I2C_NACK;
+                        }
+                    }
+                    
+                    I2C1->CTLR1 |= I2C_CTLR1_STOP;
+                    p_buf[i++] = (uint8_t)I2C1->DATAR;
+                    
+                    timeout = I2C_TIMEOUT;
+                    while (!(I2C1->STAR1 & I2C_STAR1_RXNE)) {
+                        if (--timeout == 0) {
+                            I2C1->CTLR1 |= I2C_CTLR1_ACK; /* Исправлено: Возврат ACK */
+                            i2c_bus_recovery();
+                            return I2C_NACK;
+                        }
+                    }
+                    
+                    p_buf[i] = (uint8_t)I2C1->DATAR;
+                    break;
+                }
+                
+                uint32_t timeout = I2C_TIMEOUT;
+                while (!(I2C1->STAR1 & I2C_STAR1_RXNE)) {
+                    if (--timeout == 0) {
+                        I2C1->CTLR1 |= I2C_CTLR1_ACK; /* Исправлено: Возврат ACK */
+                        i2c_bus_recovery();
+                        return I2C_NACK;
+                    }
+                }
+                p_buf[i] = (uint8_t)I2C1->DATAR;
+            }
         }
     }
 
-    I2C1->CTLR1 |= I2C_CTLR1_ACK; /* Финальное гарантированное включение ACK для следующих сессий */
+    I2C1->CTLR1 |= I2C_CTLR1_ACK; /* Гарантированный подъем ACK для штатного завершения */
     return I2C_OK;
 }
 

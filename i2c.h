@@ -14,8 +14,8 @@
 /* Частоты и параметры тактирования */
 #define PCLK1_HZ                48000000UL  /* Частота шины APB1 (SYSCLK) */
 #define APB1_FREQ_MHZ           48          /* Частота APB1 в МГц для CTLR2 */
-#define TRISE_STD               49          /* (1000нс / 20.83нс) + 1 */
-#define TRISE_FAST              15          /* (300нс / 20.83нс) + 1 */
+//#define TRISE_STD               49          /* (1000нс / 20.83нс) + 1 */
+//#define TRISE_FAST              15          /* (300нс / 20.83нс) + 1 */
 
 /* Единый таймаут для всех операций */
 #define I2C_TIMEOUT             100000
