@@ -1,5 +1,5 @@
 /*
- * i2c.c — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 5.4 (Аудит I2C)
+ * i2c.c — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 5.4.1
  */
 
 #include "i2c.h"
@@ -352,13 +352,24 @@ uint8_t i2c_wait_ack(void) {
 
 /**
  * @brief Общий хелпер ожидания флага STAR1 в цикле чтения данных.
- * При таймауте гарантированно восстанавливает ACK (для корректного завершения
- * приема) и восстанавливает шину. Используется во всех read-функциях, где
- * ожидается RXNE/BTF после успешной адресации ведомого на прием.
+ * Проверяет BERR/ARLO на каждой итерации (как и все остальные wait-циклы в
+ * этом файле), поэтому реагирует на аппаратную ошибку немедленно, а не через
+ * полный I2C_TIMEOUT. При таймауте или ошибке гарантированно восстанавливает
+ * ACK (для корректного завершения приема) и восстанавливает шину/счетчик
+ * ошибок. Используется во всех read-функциях, где ожидается RXNE/BTF после
+ * успешной адресации ведомого на прием.
  */
 static uint8_t i2c_wait_flag_or_recover(uint16_t flag) {
     uint32_t timeout = I2C_TIMEOUT;
     while (!(I2C1->STAR1 & flag)) {
+        uint16_t star1 = I2C1->STAR1;
+        if (star1 & (I2C_STAR1_BERR | I2C_STAR1_ARLO)) {
+            I2C1->STAR1 = (uint16_t)~(I2C_STAR1_BERR | I2C_STAR1_ARLO);
+            I2C1->CTLR1 |= I2C_CTLR1_ACK;
+            i2c_stop();
+            handle_critical_error();
+            return I2C_NACK;
+        }
         if (--timeout == 0) {
             I2C1->CTLR1 |= I2C_CTLR1_ACK;
             i2c_bus_recovery();
@@ -458,18 +469,43 @@ uint8_t i2c_read_buffer(uint8_t dev_addr, uint8_t reg_addr, uint8_t *p_buf, uint
         p_buf[0] = (uint8_t)I2C1->DATAR;
     } 
     else {
-        I2C1->CTLR1 |= I2C_CTLR1_ACK;
-        if (i2c_send_addr(dev_addr, I2C_DIR_RX) != I2C_OK) return I2C_NACK;
+        /* is_pair фиксирует условие len==2 один раз: оно проверяется по обе
+         * стороны вызова i2c_send_addr(), потому что POS обязан быть
+         * установлен ДО снятия флага ADDR (внутри i2c_send_addr), а ACK
+         * снят СРАЗУ ПОСЛЕ снятия ADDR — то есть сама природа тайминга
+         * требует двух точек применения одного и того же условия. */
+        const uint8_t is_pair = (len == 2);
 
-        if (len == 2) {
+        I2C1->CTLR1 |= I2C_CTLR1_ACK;
+
+        /* При POS=1 бит ACK управляет СЛЕДУЮЩИМ принимаемым байтом, а не
+         * текущим — это единственный документированный (и гонко-безопасный)
+         * способ гарантированно NACK-нуть именно 2-й (последний) байт при
+         * приёме ровно двух байт. */
+        if (is_pair) {
+            I2C1->CTLR1 |= I2C_CTLR1_POS;
+        }
+
+        if (i2c_send_addr(dev_addr, I2C_DIR_RX) != I2C_OK) {
+            I2C1->CTLR1 &= ~I2C_CTLR1_POS;
+            return I2C_NACK;
+        }
+
+        if (is_pair) {
+            /* ACK снимается СРАЗУ после снятия ADDR (уже произошло внутри
+             * i2c_send_addr) — при POS=1 это NACK-нёт именно 2-й байт. */
+            I2C1->CTLR1 &= ~I2C_CTLR1_ACK;
+
             if (i2c_wait_flag_or_recover(I2C_STAR1_BTF) != I2C_OK) {
+                I2C1->CTLR1 &= ~I2C_CTLR1_POS;
                 return I2C_NACK;
             }
-            I2C1->CTLR1 &= ~I2C_CTLR1_ACK;
             I2C1->CTLR1 |= I2C_CTLR1_STOP;
-            
+
             p_buf[0] = (uint8_t)I2C1->DATAR;
             p_buf[1] = (uint8_t)I2C1->DATAR;
+
+            I2C1->CTLR1 &= ~I2C_CTLR1_POS; /* Восстановить состояние по умолчанию */
         } 
         else {
             for (uint16_t i = 0; i < len; i++) {
