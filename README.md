@@ -1,4 +1,4 @@
-# Reliable I2C (I2C1) Bus Driver for CH32V003 (RISC-V) — Version 5.4 (I2C Audit)
+# Reliable I2C (I2C1) Bus Driver for CH32V003 (RISC-V) — Version 5.4.2 (I2C Audit)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -10,7 +10,7 @@ A high-reliability, fault-tolerant, memory-optimized I2C driver for **CH32V003**
 
 ## Architectural Improvements (Based on Deep Fundamental Review)
 
-Version 5.4 eliminates all vulnerabilities and long-term stability issues:
+Version 5.4.2 eliminates all vulnerabilities and long-term stability issues:
 
 1. **Symbol encapsulation:** The `i2c_bus_recovery` function is declared `static`, isolated inside `i2c.c` and not exported externally, minimizing the global symbol graph and maximizing GCC inlining opportunities.
 2. **Instant timeout recovery:** Fault handling is split into two independent loops:
@@ -50,8 +50,8 @@ The driver operates with the **I2C1** hardware block on the controller's dedicat
   Generates a START condition on the bus with a preliminary bus availability check. Timeout-limited.
 * `uint8_t i2c_repeated_start(void);`
   Generates a Repeated START without checking the `BUSY` flag. Used when switching from register address write to data read.
-* `void i2c_stop(void);`
-  Sets the `STOP` bit. Monitors bus release by the slave device. Calls bus recovery if the bus hangs.
+* `uint8_t i2c_stop(void);`
+  Sets the `STOP` bit. Best-effort: returns `I2C_OK` or `I2C_NACK` if bus release fails. On failure, triggers bus recovery internally.
 
 ### Data Transfer Functions
 * `uint8_t i2c_send_addr(uint8_t addr, uint8_t direction);`
@@ -321,7 +321,7 @@ int main(void) {
 }
 ```
 
-#### Version 5.4 Advantage for DACs:
+#### Version 5.4.2 Advantage for DACs:
 
 When generating a streaming analog signal (as above), the I2C bus is 100% loaded. If a power motor or relay activates nearby, the standard WCH EVT driver will hard-lock.
 
