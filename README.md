@@ -1,91 +1,93 @@
-# Высоконадёжный драйвер шины I2C (I2C1) для CH32V003 (RISC-V) — Версия 5.4 (Аудит I2C)
+# Reliable I2C (I2C1) Bus Driver for CH32V003 (RISC-V) — Version 5.4 (I2C Audit)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Высоконадёжный, устойчивый к аппаратным сбоям шины и оптимизированный по размеру памяти драйвер I2C для микроконтроллеров серии **CH32V003**. Разработан для полной замены стандартной библиотеки WCH EVT, которая склонна к глухим зависаниям ядра в бесконечных циклах ожидания флагов (`while(!I2C_CheckEvent(...))`) при возникновении электромагнитных помех, просадках питания ведомых устройств или физическом замыкании линий.
+[🇬🇧 English](README.md)
+
+A high-reliability, fault-tolerant, memory-optimized I2C driver for **CH32V003** series microcontrollers. Designed as a complete replacement for the standard WCH EVT library, which is prone to hard lockups in infinite polling loops (`while(!I2C_CheckEvent(...))`) caused by electromagnetic interference, slave power dips, or bus line shorts.
 
 ---
 
-## 🛠 Архитектурные улучшения (По результатам глубокого фундаментального ревью)
+## Architectural Improvements (Based on Deep Fundamental Review)
 
-В версии 5.4 устранены малейшие уязвимости и потенциальные проблемы долгосрочной стабильности (Long-Term Stability):
+Version 5.4 eliminates all vulnerabilities and long-term stability issues:
 
-1. **Инкапсуляция и сокрытие символов:** Функция аппаратного восстановления шины `i2c_bus_recovery` получила модификатор `static`. Она изолирована внутри `i2c.c` и не экспортирует наружу, что минимизирует глобальный граф символов и открывает компилятору GCC максимальные возможности для инлайнинга.
-2. **Мгновенная реакция на зависания (Instant Timeout Recovery):** Логика обработки сбоев разделена на два независимых контура:
-   * **Программные таймауты (зависание циклов):** Если шина заблокирована (флаг `BUSY` висит в единице) или автомат застрял на этапе `START`/`ADDR`, драйвер **сразу же (мгновенно)** инициирует процедуру аппаратного сброса, не дожидаясь повторения ошибок.
-   * **Аппаратные сбои (`BERR`, `ARLO`):** Для спорадических аппаратных ошибок (ошибка шины, потеря арбитража) оставлен накопительный счетчик `consecutive_errors` с лимитом `MAX_ERROR_COUNT = 2`.
-3. **Безопасное низкоуровневое API (`i2c_send_byte`):** Функция отправки байта четко разделена с ожиданием подтверждения. В документации зафиксировано строгое предупреждение: `i2c_send_byte` контролирует только освобождение буфера `DATAR` (`TXE`), но не завершает физическую трансляцию на шине. Для атомарной отправки внедрена инлайновая функция `i2c_write_byte()`.
-4. **Абсолутная защита бита ACK при авариях:** Во всех ветках программных таймаутов функций чтения (`i2c_read_register` и `i2c_read_buffer` для пакетов любой длины: `len==1`, `len==2`, `len>=3`) перед выходом принудительно восстанавливается бит `ACK = 1`. Это гарантирует, что упавшая посреди чтения транзакция не сломает последующие вызовы шины.
-5. **Оптимизация типов данных под архитектуру RISC-V (RV32EC):** Все параметры длины буферов переведены с `uint32_t` на `uint16_t`. Для микроконтроллера с 16 КБ Flash-памяти и ограниченным набором регистров это снижает накладные расходы на вызовы функций и уменьшает вес бинарного кода.
-6. **Инлайнинг критических путей:** Функция `handle_critical_error` объявлена как `static inline`, что исключает лишние переходы по коду (`jal`/`jr`) в обработчиках ошибок.
-7. **Устранение «магических чисел»:** Время удержания линий при генерации Clock Stretching вынесено в явную именованную константу `#define I2C_STRETCH_TIMEOUT 1000`.
-8. **Компактные предсказуемые микрозадержки:** Тяжелые и непредсказуемые циклы `for` с `volatile uint32_t` заменены на компактный генератор задержки на базе ассемблерных инструкций `__asm volatile("nop")`. Это гарантирует стабильное время формирования импульсов GPIO независимо от уровня оптимизации компилятора (`-O0`, `-Os`, `-O3`).
-9. **Полная симметрия высокоуровневого API:** Добавлена полноценная функция пакетной последовательной записи данных `i2c_write_buffer()`. Как запись регистра, так и запись буфера теперь используют единый унифицированный под капотом механизм побайтового контроля.
-
----
-
-## 🔌 Физический уровень и подключение
-
-Драйвер работает с аппаратным блоком **I2C1** на штатных выводах контроллера:
-
-* **PC1 — SDA** (Режим: Alternate Function Open-Drain, 50MHz)
-* **PC2 — SCL** (Режим: Alternate Function Open-Drain, 50MHz)
-
-> ⚠️ **ВАЖНО:** Для корректной работы шины на обеих линиях (SDA и SCL) **обязательно** должны быть установлены внешние подтягивающие (pull-up) резисторы номиналом от **2.2 кОм до 4.7 кОм** к линии питания 3.3В. Встроенная подтяжка микроконтроллера не способна обеспечить необходимую крутизну фронтов на частотах выше 10 кГц.
+1. **Symbol encapsulation:** The `i2c_bus_recovery` function is declared `static`, isolated inside `i2c.c` and not exported externally, minimizing the global symbol graph and maximizing GCC inlining opportunities.
+2. **Instant timeout recovery:** Fault handling is split into two independent loops:
+   * **Software timeouts (stuck loop):** If the bus is blocked (`BUSY` flag stuck high) or the state machine hangs at `START`/`ADDR`, the driver **immediately** initiates a hardware reset without waiting for repeated errors.
+   * **Hardware faults (`BERR`, `ARLO`):** For sporadic hardware errors (bus error, arbitration loss), an accumulator counter `consecutive_errors` with limit `MAX_ERROR_COUNT = 2` is retained.
+3. **Safe low-level API (`i2c_send_byte`):** The byte send function is cleanly separated from acknowledgment waiting. The documentation strictly warns: `i2c_send_byte` only controls `DATAR` buffer release (`TXE`) but does not complete the physical bus transfer. For atomic sends, the inline function `i2c_write_byte()` is provided.
+4. **Absolute ACK bit protection on faults:** In all software timeout branches of read functions (`i2c_read_register` and `i2c_read_buffer` for all packet lengths: `len==1`, `len==2`, `len>=3`), the `ACK = 1` bit is forcibly restored before exit. This guarantees a transaction that fails mid-read will not break subsequent bus calls.
+5. **RISC-V (RV32EC) data type optimization:** All buffer length parameters are typed as `uint16_t` instead of `uint32_t`. For a microcontroller with 16 KB Flash and a limited register set, this reduces function call overhead and binary code size.
+6. **Critical path inlining:** The `handle_critical_error` function is declared `static inline`, eliminating extra code jumps (`jal`/`jr`) in error handlers.
+7. **Magic number elimination:** The clock stretching hold time is defined as a named constant `#define I2C_STRETCH_TIMEOUT 1000`.
+8. **Compact, predictable micro-delays:** Heavy, unpredictable `for` loops with `volatile uint32_t` are replaced by a compact delay generator based on `__asm volatile("nop")` instructions, guaranteeing stable GPIO pulse timing regardless of compiler optimization level (`-O0`, `-Os`, `-O3`).
+9. **Full high-level API symmetry:** A complete sequential buffer write function `i2c_write_buffer()` is added. Both register write and buffer write now use a unified, byte-by-byte control mechanism underneath.
 
 ---
 
-## 📝 Полное описание функций API
+## Physical Layer and Wiring
 
-### Низкоуровневые функции управления и инициализации
-* `void i2c_init(uint32_t bound);`  
-  Выполняет сброс блока I2C1 через `SWRST`, настраивает тактирование GPIO и периферии, вычисляет значения регистров `CTLR2` и `CKCFGR` для работы в Standard Mode (до 100 кГц) или Fast Mode (до 400 кГц) на основе текущей частоты `SystemCoreClock`. Автоматически выставляет обязательный 14-й бит в `OADDR1`.
-* `void i2c_deinit(void);`  
-  Отключает периферию I2C1, деактивирует тактирование шины APB1 и переводит пины PC1/PC2 в высокоимпедансное состояние.
-* `uint8_t i2c_wait_bus_free(void);`  
-  Опрашивает флаг `BUSY`. Если флаг не сбросился за время `I2C_TIMEOUT`, функция аварийно вызывает `i2c_bus_recovery`. Возвращает `I2C_OK` или `I2C_NACK`.
-* `uint8_t i2c_start(void);`  
-  Генерирует СТАРТ-условие на шине с предварительной проверкой доступности шины. Ограничена таймаутом.
-* `uint8_t i2c_repeated_start(void);`  
-  Генерирует Повторный СТАРТ (Repeated START) без проверки флага `BUSY`. Используется при переходе от записи адреса регистра к чтению его данных.
-* `void i2c_stop(void);`  
-  Выставляет бит `STOP`. Контролирует освобождение шины ведомым устройством. В случае зависания вызывает процедуру восстановления шины.
+The driver operates with the **I2C1** hardware block on the controller's dedicated pins:
 
-### Функции передачи данных
-* `uint8_t i2c_send_addr(uint8_t addr, uint8_t direction);`  
-  Отправляет 7-битный адрес устройства, сдвинутый влево, соединенный с битом направления (`I2C_DIR_TX` или `I2C_DIR_RX`). Очищает флаг `ADDR` чтением регистров `STAR1` и `STAR2`. Выделяет ошибку `AF` (NACK на адрес) как некритическую.
-* `uint8_t i2c_send_byte(uint8_t data);`  
-  *Низкоуровневая функция.* Записывает байт в `DATAR` и ожидает только освобождения буфера передачи (`TXE`). **Не проверяет физический прием байта слейвом!**
-* `uint8_t i2c_wait_ack(void);`  
-  *Низкоуровневая функция.* Ожидает флаг завершения передачи байта (`BTF`) или флаг отсутствия подтверждения (`AF`). Сбрасывает счетчик ошибок при успехе.
-* `static inline uint8_t i2c_write_byte(uint8_t data);`  
-  *Атомарная инлайновая функция.* Объединяет `i2c_send_byte` и `i2c_wait_ack`. Рекомендуется для кастомных низкоуровневых последовательностей.
+* **PC1 — SDA** (Mode: Alternate Function Open-Drain, 50MHz)
+* **PC2 — SCL** (Mode: Alternate Function Open-Drain, 50MHz)
 
-### Высокоуровневое прикладное API
-* `uint8_t i2c_write_register(uint8_t dev_addr, uint8_t reg_addr, uint8_t value);`  
-  Запись одного байта `value` в указанный регистр `reg_addr` устройства `dev_addr`.
-* `uint8_t i2c_read_register(uint8_t dev_addr, uint8_t reg_addr, uint8_t *p_value);`  
-  Чтение одного байта из регистра устройства. Реализует безопасную последовательность с выключением `ACK` и выставлением `STOP` сразу после отправки адреса на чтение.
-* `uint8_t i2c_write_buffer(uint8_t dev_addr, uint8_t reg_addr, const uint8_t *p_buf, uint16_t len);`  
-  Последовательная запись массива данных `p_buf` длины `len`, начиная с регистра `reg_addr`. Полезна для отправки конфигурационных таблиц или данных дисплеев.
-* `uint8_t i2c_read_buffer(uint8_t dev_addr, uint8_t reg_addr, uint8_t *p_buf, uint16_t len);`  
-  Потоковое многобайтовое чтение данных. Включает три разных аппаратных алгоритма (для `len==1`, `len==2` и `len>=3`) в строгом соответствии с требованиями разработчиков IP-блока I2C (Synopsys/WCH).
+> **IMPORTANT:** For proper bus operation, both lines (SDA and SCL) **must** have external pull-up resistors in the range of **2.2 kΩ to 4.7 kΩ** connected to the 3.3V supply. The MCU's internal pull-up cannot provide sufficient edge slope at frequencies above 10 kHz.
 
 ---
 
-## 💻 Полные примеры практического применения
+## API Reference
 
-### Пример 1: Сканирование шины I2C (I2C Bus Scanner)
-Благодаря грамотному разделению ошибок, вызов адреса, на который никто не отвечает, возвращает обычный `I2C_NACK` и генерирует `STOP`, не приводя к сбросу шины или зависанию драйвера.
+### Low-Level Bus Management and Initialization Functions
+* `void i2c_init(uint32_t bound);`
+  Performs an I2C1 block reset via `SWRST`, configures GPIO and peripheral clocking, and calculates `CTLR2` and `CKCFGR` register values for Standard Mode (up to 100 kHz) or Fast Mode (up to 400 kHz) based on the current `SystemCoreClock`. Automatically sets the mandatory bit 14 in `OADDR1`.
+* `void i2c_deinit(void);`
+  Disables the I2C1 peripheral, deactivates the APB1 bus clock, and puts pins PC1/PC2 into a high-impedance state.
+* `uint8_t i2c_wait_bus_free(void);`
+  Polls the `BUSY` flag. If the flag is not cleared within `I2C_TIMEOUT`, the function emergency-calls `i2c_bus_recovery`. Returns `I2C_OK` or `I2C_NACK`.
+* `uint8_t i2c_start(void);`
+  Generates a START condition on the bus with a preliminary bus availability check. Timeout-limited.
+* `uint8_t i2c_repeated_start(void);`
+  Generates a Repeated START without checking the `BUSY` flag. Used when switching from register address write to data read.
+* `void i2c_stop(void);`
+  Sets the `STOP` bit. Monitors bus release by the slave device. Calls bus recovery if the bus hangs.
 
-> ℹ️ **Примечание:** Пример использует `printf()` для вывода в консоль. На CH32V003 для этого необходимо самостоятельно перенаправить вывод стандартного потока на UART (реализовать функцию `_write`/`putchar` с отправкой байт через USART). Без такого retarget'а вызовы `printf` не дадут видимого результата.
+### Data Transfer Functions
+* `uint8_t i2c_send_addr(uint8_t addr, uint8_t direction);`
+  Sends a 7-bit device address shifted left, combined with the direction bit (`I2C_DIR_TX` or `I2C_DIR_RX`). Clears the `ADDR` flag by reading `STAR1` and `STAR2` registers. Treats `AF` (address NACK) as non-critical.
+* `uint8_t i2c_send_byte(uint8_t data);`
+  *Low-level function.* Writes a byte to `DATAR` and waits only for transmit buffer release (`TXE`). **Does not check physical reception by the slave!**
+* `uint8_t i2c_wait_ack(void);`
+  *Low-level function.* Waits for byte transfer complete (`BTF`) or acknowledgment failure (`AF`) flag. Resets the error counter on success.
+* `static inline uint8_t i2c_write_byte(uint8_t data);`
+  *Atomic inline function.* Combines `i2c_send_byte` and `i2c_wait_ack`. Recommended for custom low-level sequences.
+
+### High-Level Application API
+* `uint8_t i2c_write_register(uint8_t dev_addr, uint8_t reg_addr, uint8_t value);`
+  Writes a single byte `value` to register `reg_addr` of device `dev_addr`.
+* `uint8_t i2c_read_register(uint8_t dev_addr, uint8_t reg_addr, uint8_t *p_value);`
+  Reads a single byte from a device register. Implements a safe sequence with `ACK` disabled and `STOP` set immediately after sending the read address.
+* `uint8_t i2c_write_buffer(uint8_t dev_addr, uint8_t reg_addr, const uint8_t *p_buf, uint16_t len);`
+  Sequential write of data array `p_buf` of length `len` starting from register `reg_addr`. Useful for sending configuration tables or display data.
+* `uint8_t i2c_read_buffer(uint8_t dev_addr, uint8_t reg_addr, uint8_t *p_buf, uint16_t len);`
+  Multi-byte streaming read. Implements three distinct hardware algorithms (`len==1`, `len==2`, and `len>=3`) strictly per the I2C IP block vendor (Synopsys/WCH) specifications.
+
+---
+
+## Practical Usage Examples
+
+### Example 1: I2C Bus Scanner
+Thanks to proper error separation, calling an address with no responding device returns a regular `I2C_NACK` and generates `STOP` without causing a bus reset or driver hang.
+
+> **Note:** This example uses `printf()` for console output. On CH32V003, you must redirect stdout to UART yourself (implement `_write`/`putchar` with USART byte transmission). Without this retarget, `printf` calls will produce no visible output.
 
 ```c
 #include "i2c.h"
 #include <stdio.h>
 
 void i2c_scan_bus(void) {
-    printf("--- Сканирование шины I2C1 ---\n");
+    printf("--- I2C1 Bus Scan ---\n");
     printf("     0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F\n");
     
     for (uint8_t i = 0; i < 128; i += 16) {
@@ -93,59 +95,59 @@ void i2c_scan_bus(void) {
         for (uint8_t j = 0; j < 16; j++) {
             uint8_t addr = i + j;
             
-            // Пропускаем зарезервированные адреса
+            // Skip reserved addresses
             if (addr < 0x08 || addr > 0x77) {
                 printf("   ");
                 continue;
             }
             
-            // Пытаемся отправить СТАРТ и адрес устройства в режиме записи
+            // Attempt START and device address in write mode
             if (i2c_start() == I2C_OK) {
                 if (i2c_send_addr(addr, I2C_DIR_TX) == I2C_OK) {
-                    printf("%02X ", addr); // Устройство ответило ACK!
-                    i2c_stop(); // Завершаем транзакцию только при успешном ACK
+                    printf("%02X ", addr); // Device ACKed!
+                    i2c_stop();            // End transaction only on successful ACK
                 } else {
-                    printf("-- "); // Устройство ответило NACK — i2c_send_addr уже сгенерировал STOP
+                    printf("-- "); // Device NACKed — i2c_send_addr already issued STOP
                 }
             } else {
-                printf("?? "); // Ошибка генерации СТАРТ
+                printf("?? "); // START generation error
             }
         }
         printf("\n");
     }
-    printf("--- Сканирование завершено ---\n");
+    printf("--- Scan complete ---\n");
 }
 ```
 
-### Пример 2: Чтение FIFO буфера жестов датчика APDS-9960
+### Example 2: Reading the APDS-9960 Gesture Sensor FIFO Buffer
 
-В датчиках с внутренним цикличным FIFO-буфером критически важно вычитать ровно столько байт, сколько указал датчик. Лишний незапланированный импульс SCL приведет к тому, что датчик безвозвратно удалит следующий байт из своей памяти. Наш драйвер выполняет чтение $N \ge 3$ строго по спецификации.
+In sensors with an internal cyclic FIFO buffer, it is critical to read exactly the number of bytes the sensor reports. An extra, unplanned SCL pulse will cause the sensor to irreversibly discard the next byte from memory. Our driver reads N ≥ 3 strictly per specification.
 
 ```c
 #include "i2c.h"
 
 #define APDS9960_I2C_ADDR    0x39
-#define APDS9960_REG_GFLVL   0xAE   // Регистр уровня заполнения FIFO
-#define APDS9960_REG_GFIFO_R 0xFC   // Начальный регистр чтения FIFO
+#define APDS9960_REG_GFLVL   0xAE   // FIFO fill level register
+#define APDS9960_REG_GFIFO_R 0xFC   // FIFO read start register
 
 static uint8_t raw_gesture_data[128];
 
 void handle_gesture_sensor(void) {
     uint8_t datasets_count = 0;
     
-    // Читаем количество доступных наборов данных (1 набор = 4 байта: [U, D, L, R])
+    // Read the number of available datasets (1 set = 4 bytes: [U, D, L, R])
     if (i2c_read_register(APDS9960_I2C_ADDR, APDS9960_REG_GFLVL, &datasets_count) != I2C_OK) {
-        return; // Ошибка транзакции, драйвер защищен от зависания
+        return; // Transaction error — driver is protected against hangs
     }
     
-    if (datasets_count == 0) return; // Данных пока нет
-    if (datasets_count > 32) datasets_count = 32; // Ограничение под размер локального буфера
+    if (datasets_count == 0) return; // No data yet
+    if (datasets_count > 32) datasets_count = 32; // Limit to local buffer size
     
     uint16_t total_bytes = datasets_count * 4;
     
-    // Пакетное чтение FIFO буфера данных
+    // Bulk read of FIFO data buffer
     if (i2c_read_buffer(APDS9960_I2C_ADDR, APDS9960_REG_GFIFO_R, raw_gesture_data, total_bytes) == I2C_OK) {
-        // Обработка данных
+        // Data processing
         for (uint16_t i = 0; i < datasets_count; i++) {
             uint16_t base = i * 4;
             uint8_t up    = raw_gesture_data[base + 0];
@@ -153,229 +155,229 @@ void handle_gesture_sensor(void) {
             uint8_t left  = raw_gesture_data[base + 2];
             uint8_t right = raw_gesture_data[base + 3];
             
-            // Реализация вашей математики распознавания движения рук...
+            // Your gesture recognition math here...
         }
     }
 }
 ```
 
-### Пример 3: Запись пула конфигурации в энергонезависимую память EEPROM (24LCxx)
+### Example 3: Writing a Configuration Block to EEPROM (24LCxx)
 
-Пример демонстрирует использование симметричной функции пакетной записи `i2c_write_buffer` для отправки страницы данных в память.
+Demonstrates use of the symmetric `i2c_write_buffer` function to send a page of data to non-volatile memory.
 
 ```c
 #include "i2c.h"
 
-#define EEPROM_I2C_ADDR    0x50 // Базовый адрес EEPROM 24LC64
-#define PAGE_START_ADDR    0x00 // Адрес ячейки памяти внутри EEPROM
+#define EEPROM_I2C_ADDR    0x50 // 24LC64 base address
+#define PAGE_START_ADDR    0x00 // Memory cell address inside EEPROM
 
 static const uint8_t calibration_table[8] = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0};
 
 uint8_t save_calibration(void) {
-    // Функция автоматически сгенерирует START, передаст адрес памяти, 
-    // передаст внутренний адрес регистра/ячейки PAGE_START_ADDR, 
-    // последовательно выдаст все 8 байт массива с побайтовой проверкой ACK и завершит транзакцию через STOP.
+    // The function automatically generates START, transmits the memory address,
+    // sends the internal register/cell address PAGE_START_ADDR,
+    // sequentially clocks out all 8 array bytes with per-byte ACK checking, and ends via STOP.
     return i2c_write_buffer(EEPROM_I2C_ADDR, PAGE_START_ADDR, calibration_table, 8);
 }
 ```
 
-### Пример 4: Работа с DAC7571
+### Example 4: Working with the DAC7571
 
-Работа с ЦАП DAC7571 (от Texas Instruments) имеет одну важную особенность, которую нужно учитывать при использовании нашего драйвера.
+The DAC7571 (Texas Instruments) has one important quirk you need to account for when using our driver.
 
-В отличие от большинства датчиков (таких как APDS-9960), у DAC7571 нет внутренних адресов регистров. Этот чип — 12-битный одноканальный ЦАП, и он ожидает, что сразу после его I2C-адреса мастер передаст ровно 2 байта данных, содержащих конфигурацию режима работы и 12-битное значение напряжения.
+Unlike most sensors (such as APDS-9960), the DAC7571 has no internal register addresses. This chip is a 12-bit single-channel DAC that expects the master to transmit exactly 2 data bytes immediately after its I2C address, containing the operating mode configuration and the 12-bit voltage value.
 
-Поэтому стандартная функция `i2c_write_register` сюда не подойдет (она отправляет 3 байта: адрес -> регистр -> данные). Но благодаря тому, что мы сохранили в `i2c.h` открытым низкоуровневый контур API, работать с DAC7571 становится очень просто и элегантно.
+Therefore, the standard `i2c_write_register` function won't work (it sends 3 bytes: address → register → data). However, because we keep the low-level API open in `i2c.h`, working with the DAC7571 becomes straightforward and elegant.
 
-#### Протокол записи в DAC7571
+#### DAC7571 Write Protocol
 
-После отправки адреса устройства (0x4C или 0x4D), ЦАП ждет два байта:
+After sending the device address (0x4C or 0x4D), the DAC expects two bytes:
 
-- **Byte 1 (MSB):** `[ PD1 | PD0 | 0 | 0 | D11 | D10 | D9 | D8 ]` — биты управления питанием + 4 старших бита данных.
-- **Byte 2 (LSB):** `[ D7  | D6  | D5| D4| D3  | D2  | D1  | D0 ]` — 8 младших бит данных.
+- **Byte 1 (MSB):** `[ PD1 | PD0 | 0 | 0 | D11 | D10 | D9 | D8 ]` — power control bits + 4 MSBs of data.
+- **Byte 2 (LSB):** `[ D7  | D6  | D5| D4| D3  | D2  | D1  | D0 ]` — 8 LSBs of data.
 
-Для нормальной работы биты Power-Down (PD1, PD0) должны быть равны 00.
+For normal operation, Power-Down bits (PD1, PD0) must be 00.
 
-#### Приоритетный вариант: Использование низкоуровневого API
+#### Preferred Approach: Using the Low-Level API
 
-Это самый прозрачный и архитектурно правильный способ работы с устройствами без регистровой структуры.
+This is the most transparent and architecturally correct way to work with register-less devices.
 
 ```c
 #include "i2c.h"
 
-// Адрес DAC7571 зависит от пина A0:
-// Если A0 подключен к GND, 7-битный адрес = 0x4C (бинарно: 1001100)
-// Если A0 подключен к VDD, 7-битный адрес = 0x4D (бинарно: 1001101)
+// DAC7571 address depends on the A0 pin:
+// If A0 is tied to GND, 7-bit address = 0x4C (binary: 1001100)
+// If A0 is tied to VDD, 7-bit address = 0x4D (binary: 1001101)
 #define DAC7571_I2C_ADDR    0x4C
 
 /**
- * @brief Установка выходного напряжения на ЦАП DAC7571
- * @param data_12bit: значение от 0 до 4095 (12 бит)
- * @return I2C_OK или I2C_NACK
+ * @brief Set the output voltage on the DAC7571
+ * @param data_12bit: value from 0 to 4095 (12 bits)
+ * @return I2C_OK or I2C_NACK
  */
 uint8_t dac7571_set_voltage(uint16_t data_12bit) {
-    // 1. Защита от выхода за границы 12-битного разрешения
+    // 1. Clamp to 12-bit resolution
     if (data_12bit > 4095) {
         data_12bit = 4095;
     }
 
-    // 2. Формируем два байта по спецификации TI
-    // Старший байт: PD1=0, PD0=0 (Normal Mode), далее 4 старших бита данных
+    // 2. Form two bytes per TI specification
+    // MSB: PD1=0, PD0=0 (Normal Mode), then 4 MSBs of data
     uint8_t byte_msb = (uint8_t)((data_12bit >> 8) & 0x0F);
-    // Младший байт: оставшиеся 8 бит данных
+    // LSB: remaining 8 data bits
     uint8_t byte_lsb = (uint8_t)(data_12bit & 0xFF);
 
-    // 3. Низкоуровневая транзакция с пошаговым контролем ошибок
+    // 3. Low-level transaction with step-by-step error control
     if (i2c_start() != I2C_OK) return I2C_NACK;
     
     if (i2c_send_addr(DAC7571_I2C_ADDR, I2C_DIR_TX) != I2C_OK) {
-        // Если устройство отключено, i2c_send_addr сам сгенерирует STOP
+        // If the device is disconnected, i2c_send_addr generates STOP itself
         return I2C_NACK; 
     }
     
-    // Передаем старший байт и ждем ACK
+    // Send MSB and wait for ACK
     if (i2c_write_byte(byte_msb) != I2C_OK) return I2C_NACK;
     
-    // Передаем младший байт и ждем ACK
+    // Send LSB and wait for ACK
     if (i2c_write_byte(byte_lsb) != I2C_OK) return I2C_NACK;
     
-    // Успешное завершение транзакции
+    // Successful transaction complete
     i2c_stop();
     return I2C_OK;
 }
 
 /**
- * @brief Перевод ЦАП в режим сна (Power-Down) для экономии энергии
- * @param mode: 1 - подтяжка 1 кОм к GND, 2 - 100 кОм к GND, 3 - High-Z (высокий импеданс)
+ * @brief Put the DAC into power-down mode to save energy
+ * @param mode: 1 - 1 kΩ pull-down to GND, 2 - 100 kΩ pull-down to GND, 3 - High-Z
  */
 uint8_t dac7571_power_down(uint8_t mode) {
     if (mode < 1 || mode > 3) return I2C_NACK;
     
-    // Сдвигаем режим в биты PD1:PD0 (6-й и 7-й биты первого байта)
+    // Shift mode into PD1:PD0 bits (bits 6-7 of the first byte)
     uint8_t byte_msb = (mode << 6); 
     
     if (i2c_start() != I2C_OK) return I2C_NACK;
     if (i2c_send_addr(DAC7571_I2C_ADDR, I2C_DIR_TX) != I2C_OK) return I2C_NACK;
     if (i2c_write_byte(byte_msb) != I2C_OK) return I2C_NACK;
-    if (i2c_write_byte(0x00) != I2C_OK) return I2C_NACK; // Второй байт не важен, но обязателен
+    if (i2c_write_byte(0x00) != I2C_OK) return I2C_NACK; // Second byte is unused but required
     i2c_stop();
     
     return I2C_OK;
 }
 ```
 
-#### Альтернативный вариант: "Лайфхак" через i2c_write_buffer
+#### Alternative: "Trick" via i2c_write_buffer
 
-Если вы хотите использовать только высокоуровневые функции, можно перехитрить протокол. Функция `i2c_write_buffer(dev_addr, reg_addr, p_buf, len)` отправляет `reg_addr` как первый байт данных, а затем отправляет массив.
+If you want to use only high-level functions, you can outsmart the protocol. `i2c_write_buffer(dev_addr, reg_addr, p_buf, len)` sends `reg_addr` as the first data byte, then sends the array.
 
-Мы можем передать Byte 1 (MSB) в качестве аргумента `reg_addr`, а Byte 2 (LSB) положить в буфер длиной 1 байт:
+We can pass Byte 1 (MSB) as the `reg_addr` argument and Byte 2 (LSB) in a 1-byte buffer:
 
 ```c
 uint8_t dac7571_set_voltage_via_buffer(uint16_t data_12bit) {
     if (data_12bit > 4095) data_12bit = 4095;
 
-    uint8_t byte_msb = (uint8_t)((data_12bit >> 8) & 0x0F); // Пойдет вместо адреса регистра
-    uint8_t byte_lsb = (uint8_t)(data_12bit & 0xFF);        // Пойдет в буфер
+    uint8_t byte_msb = (uint8_t)((data_12bit >> 8) & 0x0F); // Goes in place of register address
+    uint8_t byte_lsb = (uint8_t)(data_12bit & 0xFF);        // Goes in the buffer
 
-    // Трансляция на шине будет идеальной: START -> ADDR -> MSB -> LSB -> STOP
+    // Bus sequence will be perfect: START -> ADDR -> MSB -> LSB -> STOP
     return i2c_write_buffer(DAC7571_I2C_ADDR, byte_msb, &byte_lsb, 1);
 }
 ```
 
-Этот вариант экономит ещё немного байт во Flash-памяти CH32V003, так как повторно использует уже написанный тяжелый код функции `i2c_write_buffer`.
+This saves additional Flash bytes on CH32V003 by reusing the already-written `i2c_write_buffer` code.
 
-#### Практический пример: Генерация пилообразного сигнала (Sawtooth Wave)
+#### Practical Example: Sawtooth Wave Generation
 
-Поскольку наш драйвер оптимизирован по скорости и не имеет лишних задержек, мы можем циклически обновлять ЦАП в основном цикле программы, формируя аналоговый сигнал высокой частоты.
+Since our driver is optimized for speed with no extra delays, you can cyclically update the DAC in the main loop, generating a high-frequency analog signal.
 
 ```c
 #include "i2c.h"
 
 int main(void) {
-    // Инициализация МК на 48 МГц (SystemInit)
+    // MCU initialization at 48 MHz (SystemInit)
     
-    // Включаем I2C на максимальной скорости Fast Mode (400 кГц)
-    // Чем выше скорость I2C, тем выше частота дискретизации нашего сигнала!
+    // Enable I2C at maximum speed Fast Mode (400 kHz)
+    // Higher I2C speed = higher signal sampling rate!
     i2c_init(400000); 
     
     uint16_t dac_value = 0;
 
     while(1) {
-        // Отправляем текущее значение на ЦАП
+        // Send current value to the DAC
         dac7571_set_voltage(dac_value);
         
-        // Инкрементируем значение напряжения
-        dac_value += 4; // Шаг пилы (подбирается экспериментально)
+        // Increment voltage value
+        dac_value += 4; // Sawtooth step (tuned experimentally)
         
-        // При достижении 12-битного максимума (4095) сбрасываем в 0
+        // Reset to 0 at 12-bit max (4095)
         if (dac_value >= 4096) {
             dac_value = 0;
         }
         
-        // Никаких delay! Драйвер и так ограничен скоростью шины 400кГц.
-        // На осциллографе вы увидите чистую, гладкую аналоговую "пилу" 
-        // без единого зависания шины.
+        // No delays needed! The driver is already limited by the 400kHz bus speed.
+        // On an oscilloscope you'll see a clean, smooth analog "sawtooth"
+        // without a single bus hang.
     }
 }
 ```
 
-#### Преимущество Версии 5.4 для ЦАП:
+#### Version 5.4 Advantage for DACs:
 
-При генерации потокового аналогового сигнала (как в примере выше) шина I2C нагружена на 100%. Если в этот момент рядом заработает силовой мотор или реле, стандартный драйвер WCH EVT тут же зависнет наглухо.
+When generating a streaming analog signal (as above), the I2C bus is 100% loaded. If a power motor or relay activates nearby, the standard WCH EVT driver will hard-lock.
 
-Финальная версия нашего драйвера в случае такой помехи:
+Our driver in that scenario:
 
-1. Поймет таймаут или ошибку BERR/ARLO.
-2. За доли микросекунд сбросит периферию и «прощелкает» SCL через `__asm volatile("nop")`.
-3. Мгновенно вернется к генерации волны. На осциллографе это будет выглядеть как едва заметная микро-микро-точка сбоя, но система продолжит работать стабильно и никогда не зависнет.
+1. Detects the timeout or BERR/ARLO error.
+2. Within microseconds, resets the peripheral and clocks SCL via `__asm volatile("nop")`.
+3. Immediately resumes wave generation. On an oscilloscope, it appears as a barely noticeable micro-glitch, but the system continues stably and never hangs.
 
-## 🛡 Алгоритм восстановления шины (Как это устроено внутри)
+## Bus Recovery Algorithm (Inside)
 
-Если внешнее устройство зависло на полуслове и удерживает линию данных SDA в состоянии LOW, мастер-аппарат не может сгенерировать условие START или STOP. Драйвер решает эту проблему следующим образом:
+If an external device hangs mid-word and holds the SDA line LOW, the master hardware cannot generate a START or STOP condition. The driver solves this as follows:
 
-1. Внутренний макрос `I2C1->CTLR1 &= ~I2C_CTLR1_PE;` полностью выключает аппаратный блок I2C.
-2. Пины PC1 и PC2 переводятся в режим обычного программного выхода с открытым стоком (GPIO_CFG_OUT_OD_2M).
-3. Драйвер вручную генерирует до 16 импульсов на линии SCL. На каждом импульсе проверяется состояние SDA. Как только ведомое устройство видит такты и отпускает SDA в состояние HIGH, цикл досрочно прерывается. Если на линии SCL активирован Clock Stretching (ведомый принудительно зажал SCL в ноль), мастер безопасно ожидает его отпускания в рамках `I2C_STRETCH_TIMEOUT`.
-4. Силами GPIO формируется валидная последовательность STOP-условия: перевод SCL в LOW $\to$ перевод SDA в LOW $\to$ перевод SCL в HIGH $\to$ перевод SDA в HIGH.
-5. Блоку I2C1 выдается команда жесткого сброса SWRST.
-6. Выводы PC1 и PC2 переконфигурируются обратно в режим альтернативной функции AF_OD.
-7. Вызывается функция восстановления конфигурационных регистров шины. Восстанавливаются параметры тактирования, лимиты времени нарастания фронтов и повторно активируется аппаратный контроль бита ACK.
+1. `I2C1->CTLR1 &= ~I2C_CTLR1_PE;` fully disables the I2C hardware block.
+2. PC1 and PC2 are switched to general-purpose open-drain output mode (GPIO_CFG_OUT_OD_2M).
+3. The driver manually generates up to 16 clock pulses on SCL. After each pulse, it checks SDA. As soon as the slave releases SDA to HIGH, the loop terminates early. If Clock Stretching is active on SCL (slave holds SCL low), the master safely waits within `I2C_STRETCH_TIMEOUT`.
+4. A valid STOP sequence is generated via GPIO: SCL LOW → SDA LOW → SCL HIGH → SDA HIGH.
+5. A hard SWRST reset is issued to the I2C1 block.
+6. PC1 and PC2 are reconfigured back to AF_OD alternate function mode.
+7. The register restore function is called: clock parameters, rise time limits are reloaded, and the hardware ACK control is re-enabled.
 
-## Установка и интеграция
+## Installation and Integration
 
-### Вариант 1: PlatformIO (рекомендуется)
+### Option 1: PlatformIO (Recommended)
 
-Добавьте библиотеку в файл `platformio.ini` вашего проекта:
+Add the library to your `platformio.ini`:
 
 ```ini
 lib_deps =
     https://github.com/tama18101971/I2C-CH32V003.git
 ```
 
-### Вариант 2: Ручная интеграция
+### Option 2: Manual Integration
 
-Скопируйте файлы `i2c.h` и `i2c.c` из папки `src/` в ваш проект.
+Copy `i2c.h` and `i2c.c` from the `src/` folder into your project.
 
-Частота тактирования определяется автоматически из `SystemCoreClock` — ручная настройка не требуется.
+The clock frequency is automatically determined from `SystemCoreClock` — no manual configuration is needed.
 
-Подключите заголовочный файл:
+Include the header:
 
 ```c
 #include "i2c.h"
 ```
 
-В функции `main()` инициализируйте шину:
+Initialize the bus in `main()`:
 
 ```c
-i2c_init(400000); // Fast Mode 400 кГц (или 100000 для Standard Mode)
+i2c_init(400000); // Fast Mode 400 kHz (or 100000 for Standard Mode)
 ```
 
-### Готовый пример
+### Complete Example
 
-Полный рабочий пример сканирования шины I2C с готовым `platformio.ini` находится в [`examples/i2c_scanner`](examples/i2c_scanner).
+A full working I2C bus scanner example with a ready-made `platformio.ini` is located in [`examples/i2c_scanner`](examples/i2c_scanner).
 
-## 📄 Лицензия
+## License
 
-Библиотека распространяется под свободной лицензией MIT. Разрешено использование, модификация и распространение кода как в открытых некоммерческих, так и в закрытых коммерческих промышленных продуктах без каких-либо роялти и ограничений.
+This library is released under the permissive MIT License. Use, modification, and redistribution are permitted in both open-source non-commercial and closed-source commercial industrial products with no royalties or restrictions.
 
 [LICENSE](LICENSE)
