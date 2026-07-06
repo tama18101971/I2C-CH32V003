@@ -2,7 +2,7 @@
 #define I2C_H
 
 /*
- * i2c.h — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 5.4.1
+ * i2c.h — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 5.4.2
  *
  * Применение: APDS-9960, DAC7571, EEPROM (24LCxx), OLED (SSD1306) и др.
  * Пин-конфигурация: PC1 — SDA, PC2 — SCL (AF_OD, Open-Drain).
@@ -29,7 +29,7 @@ void i2c_deinit(void);                                    /* Отключени�
 uint8_t i2c_wait_bus_free(void);                          /* Ожидание освобождения шины с авто-recovery */
 uint8_t i2c_start(void);                                  /* Генерация START с проверкой BUSY */
 uint8_t i2c_repeated_start(void);                         /* Генерация Повторного СТАРТа (Repeated START) */
-void i2c_stop(void);                                      /* Генерация STOP с контролем таймаута */
+uint8_t i2c_stop(void);                                      /* Генерация STOP с контролем таймаута */
 
 /* Низкоуровневое API передачи */
 uint8_t i2c_send_addr(uint8_t addr, uint8_t direction);   /* Отправка адреса + направление */
