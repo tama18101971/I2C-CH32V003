@@ -2,7 +2,7 @@
 #define I2C_H
 
 /*
- * i2c.h — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 5.4.2
+ * i2c.h — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 5.4.3
  *
  * Применение: APDS-9960, DAC7571, EEPROM (24LCxx), OLED (SSD1306) и др.
  * Пин-конфигурация: PC1 — SDA, PC2 — SCL (AF_OD, Open-Drain).
@@ -15,21 +15,30 @@
 #define I2C_TIMEOUT             100000
 #define I2C_STRETCH_TIMEOUT     1000        /* Максимальное время ожидания отпускания SCL ведомым */
 
+/* Пауза между STOP и следующим START при сканировании, мкс */
+#define I2C_INTER_FRAME_DELAY_US  50
+
 /* Направление передачи */
 #define I2C_DIR_TX  0   /* Master Transmitter */
 #define I2C_DIR_RX  1   /* Master Receiver */
 
 /* Коды возврата */
-#define I2C_OK    0   /* Успешно / Подтверждено (ACK) */
-#define I2C_NACK  1   /* Не подтверждено (NACK) или ошибка/таймаут */
+#define I2C_OK          0   /* Успешно / Подтверждено (ACK) */
+#define I2C_NACK        1   /* Не подтверждено (NACK) или ошибка/таймаут */
+#define I2C_ERR_BUS     2   /* Шина занята/зависла */
+#define I2C_ERR_CLK     3   /* Некорректная частота тактирования (PCLK1 вне 2..48 МГц) */
+#define I2C_ERR_TIMEOUT 4   /* Аппаратный таймаут ожидания флага */
 
 /* Основное API управления шиной */
-void i2c_init(uint32_t bound);                            /* Инициализация I2C1 */
+uint8_t i2c_init(uint32_t bound);                          /* Инициализация I2C1. Возвращает I2C_OK или I2C_ERR_CLK */
 void i2c_deinit(void);                                    /* Отключение I2C1 */
 uint8_t i2c_wait_bus_free(void);                          /* Ожидание освобождения шины с авто-recovery */
 uint8_t i2c_start(void);                                  /* Генерация START с проверкой BUSY */
 uint8_t i2c_repeated_start(void);                         /* Генерация Повторного СТАРТа (Repeated START) */
 uint8_t i2c_stop(void);                                      /* Генерация STOP с контролем таймаута */
+
+/* Проверка адреса для сканера */
+uint8_t i2c_probe_address(uint8_t addr, uint16_t *p_star1, uint16_t *p_star2);
 
 /* Низкоуровневое API передачи */
 uint8_t i2c_send_addr(uint8_t addr, uint8_t direction);   /* Отправка адреса + направление */

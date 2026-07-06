@@ -1,5 +1,5 @@
 /*
- * i2c.c — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 5.4.2
+ * i2c.c — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 5.4.3
  */
 
 #include "i2c.h"
@@ -25,6 +25,9 @@
 /* Константа полупериода такта SCL при аппаратном восстановлении шины (для nop-генератора) */
 #define I2C_SCL_PULSE_DELAY    80
 
+/* Примерное количество тактов ядра на одну итерацию пустого цикла (load/branch/nop) */
+#define I2C_NOP_LOOP_CYCLES    4
+
 /* Лимит последовательных КРИТИЧЕСКИХ ХАРДВЕРНЫХ ошибок перед восстановлением шины */
 #define MAX_ERROR_COUNT        2
 
@@ -46,6 +49,18 @@ static inline void i2c_delay(void) {
 }
 
 /**
+ * @brief Программная задержка в микросекундах на основе SystemCoreClock.
+ * @note Используется внутри драйвера, чтобы не зависеть от внешнего Delay_Init().
+ */
+static inline void i2c_usleep(uint32_t us) {
+    uint32_t ticks = (SystemCoreClock / 1000000UL) * us;
+    uint32_t loops = (ticks < I2C_NOP_LOOP_CYCLES) ? 1 : (ticks / I2C_NOP_LOOP_CYCLES);
+    for (volatile uint32_t i = 0; i < loops; i++) {
+        __asm volatile("nop");
+    }
+}
+
+/**
  * @brief Фиксация аппаратных критических ошибок (ARLO, BERR).
  */
 static inline void handle_critical_error(void) {
@@ -58,10 +73,11 @@ static inline void handle_critical_error(void) {
 /**
  * @brief Вспомогательная функция конфигурации регистров тактирования I2C
  * @note  CH32V003 не имеет делителя APB1 (PPRE1 отсутствует в CFGR0),
- *        поэтому PCLK1 ≡ HCLK ≡ SystemCoreClock. Проверка ниже —
+ *        поэтому PCLK1 == HCLK == SystemCoreClock. Проверка ниже —
  *        страховка от некорректной инициализации тактирования.
+ * @return I2C_OK или I2C_ERR_CLK
  */
-static void i2c_configure_registers(void) {
+static uint8_t i2c_configure_registers(void) {
     uint32_t pclk1 = SystemCoreClock;
 
     /* CH32V003 I2C: SYSCLK must be in [2 MHz, 48 MHz] range.
@@ -69,7 +85,7 @@ static void i2c_configure_registers(void) {
      * the peripheral specification.  If you see this, the clock tree
      * was not configured before calling i2c_init(). */
     if (pclk1 < 2000000UL || pclk1 > 48000000UL) {
-        return;
+        return I2C_ERR_CLK;
     }
 
     uint32_t freq_mhz = pclk1 / 1000000UL;
@@ -92,6 +108,8 @@ static void i2c_configure_registers(void) {
     }
     I2C1->CKCFGR = fs_bit | ccr_val;
     I2C1->OADDR1 = OADDR1_REQUIRED_BIT14;
+
+    return I2C_OK;
 }
 
 /**
@@ -147,10 +165,13 @@ static void i2c_bus_recovery(void) {
     GPIOC->CFGLR |=  (GPIO_CFG_AF_OD_50M << 4) | (GPIO_CFG_AF_OD_50M << 8);
 
     /* 7. Полное восстановление конфигурационных регистров I2C */
-    i2c_configure_registers();
+    uint8_t cfg_status = i2c_configure_registers();
 
-    /* 8. Включаем I2C обратно + ACK */
+    /* 8. Включаем I2C обратно + ACK, сбрасываем POS на всякий случай */
     I2C1->CTLR1 = I2C_CTLR1_PE | I2C_CTLR1_ACK;
+    I2C1->CTLR1 &= ~I2C_CTLR1_POS;
+    
+    (void)cfg_status; /* keep for future use */
 
     /* Атомарный безопасный сброс флагов ошибок прямой записью инвертированной маски */
     I2C1->STAR1 = (uint16_t)~(I2C_STAR1_AF | I2C_STAR1_ARLO | I2C_STAR1_BERR);
@@ -164,8 +185,9 @@ static void i2c_bus_recovery(void) {
 
 /**
  * @brief Полная и безопасная инициализация I2C1 на CH32V003
+ * @return I2C_OK или I2C_ERR_CLK (если SystemCoreClock вне диапазона 2..48 МГц)
  */
-void i2c_init(uint32_t bound) {
+uint8_t i2c_init(uint32_t bound) {
     i2c_speed = bound;
 
     // 1. Включаем тактирование Порта C и самого блока I2C1
@@ -181,10 +203,18 @@ void i2c_init(uint32_t bound) {
     I2C1->CTLR1 &= ~I2C_CTLR1_SWRST;
 
     // 4. Расчет и запись делителей скорости
-    i2c_configure_registers();
+    uint8_t cfg_status = i2c_configure_registers();
+    if (cfg_status != I2C_OK) {
+        return cfg_status;
+    }
 
     // 5. Окончательно включаем периферию I2C + авто-ACK
     I2C1->CTLR1 |= (I2C_CTLR1_PE | I2C_CTLR1_ACK);
+
+    // 6. Короткая пауза, пока периферия выйдет в стабильное состояние
+    i2c_usleep(I2C_INTER_FRAME_DELAY_US);
+
+    return I2C_OK;
 }
 
 /**
@@ -267,6 +297,10 @@ uint8_t i2c_stop(void) {
             return I2C_NACK;
         }
     }
+
+    /* Небольшая пауза между транзакциями — важно при сканировании, когда
+     * следующий START выдаётся немедленно после STOP. */
+    i2c_usleep(I2C_INTER_FRAME_DELAY_US);
     return I2C_OK;
 }
 
@@ -312,6 +346,57 @@ uint8_t i2c_send_addr(uint8_t addr, uint8_t direction) {
     (void)I2C1->STAR2;
 
     return I2C_OK;
+}
+
+/**
+ * @brief Проверка адреса с сохранением STAR1/STAR2 для диагностики.
+ * @param addr 7-битный адрес
+ * @param p_star1 указатель для сохранения STAR1 (можно NULL)
+ * @param p_star2 указатель для сохранения STAR2 (можно NULL)
+ * @return I2C_OK если устройство ответило ACK, иначе I2C_NACK
+ * @note При NACK (AF) шина освобождается одним STOP, без двойного вызова.
+ */
+uint8_t i2c_probe_address(uint8_t addr, uint16_t *p_star1, uint16_t *p_star2) {
+    if (i2c_start() != I2C_OK) {
+        if (p_star1) *p_star1 = I2C1->STAR1;
+        if (p_star2) *p_star2 = I2C1->STAR2;
+        return I2C_NACK;
+    }
+
+    I2C1->DATAR = (addr << 1) | I2C_DIR_TX;
+
+    uint32_t timeout = I2C_TIMEOUT;
+    while (!(I2C1->STAR1 & (I2C_STAR1_ADDR | I2C_STAR1_AF))) {
+        uint16_t star1 = I2C1->STAR1;
+        if (star1 & (I2C_STAR1_BERR | I2C_STAR1_ARLO)) {
+            I2C1->STAR1 = (uint16_t)~(I2C_STAR1_BERR | I2C_STAR1_ARLO);
+            i2c_stop();
+            handle_critical_error();
+            if (p_star1) *p_star1 = I2C1->STAR1;
+            if (p_star2) *p_star2 = I2C1->STAR2;
+            return I2C_NACK;
+        }
+        if (--timeout == 0) {
+            i2c_bus_recovery();
+            if (p_star1) *p_star1 = I2C1->STAR1;
+            if (p_star2) *p_star2 = I2C1->STAR2;
+            return I2C_NACK;
+        }
+    }
+
+    uint8_t res = (I2C1->STAR1 & I2C_STAR1_ADDR) ? I2C_OK : I2C_NACK;
+    if (p_star1) *p_star1 = I2C1->STAR1;
+    if (p_star2) *p_star2 = I2C1->STAR2;
+
+    if (res == I2C_OK) {
+        (void)I2C1->STAR1;
+        (void)I2C1->STAR2;
+        i2c_stop();
+    } else {
+        I2C1->STAR1 = (uint16_t)~I2C_STAR1_AF;
+        i2c_stop();
+    }
+    return res;
 }
 
 /**
