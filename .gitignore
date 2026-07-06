@@ -1,0 +1,22 @@
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Build artifacts
+*.o
+*.obj
+*.elf
+*.hex
+*.bin
+*.map
+*.d
+
+# OS
+.DS_Store
+Thumbs.db

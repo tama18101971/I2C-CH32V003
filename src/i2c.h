@@ -2,7 +2,7 @@
 #define I2C_H
 
 /*
- * i2c.h — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 5 (Финал)
+ * i2c.h — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 5.4 (Аудит I2C)
  *
  * Применение: APDS-9960, DAC7571, EEPROM (24LCxx), OLED (SSD1306) и др.
  * Пин-конфигурация: PC1 — SDA, PC2 — SCL (AF_OD, Open-Drain).
@@ -10,12 +10,6 @@
 
 #include "ch32v00x.h"
 #include <stdint.h>
-
-/* Частоты и параметры тактирования */
-#define PCLK1_HZ                48000000UL  /* Частота шины APB1 (SYSCLK) */
-#define APB1_FREQ_MHZ           48          /* Частота APB1 в МГц для CTLR2 */
-//#define TRISE_STD               49          /* (1000нс / 20.83нс) + 1 */
-//#define TRISE_FAST              15          /* (300нс / 20.83нс) + 1 */
 
 /* Единый таймаут для всех операций */
 #define I2C_TIMEOUT             100000
