@@ -80,7 +80,7 @@ The driver operates with the **I2C1** hardware block on the controller's dedicat
 ## Practical Usage Examples
 
 ### Example 1: I2C Bus Scanner
-Thanks to proper error separation, calling an address with no responding device returns a regular `I2C_NACK` and generates `STOP` without causing a bus reset or driver hang.
+The high-level `i2c_probe_address()` helper encapsulates START, address transmission, and STOP into a single safe call — no manual low-level sequencing needed. Calling an address with no responding device returns a regular `I2C_NACK` without causing a bus reset or driver hang.
 
 > **Note:** This example uses `printf()` for console output. On CH32V003, you must redirect stdout to UART yourself (implement `_write`/`putchar` with USART byte transmission). Without this retarget, `printf` calls will produce no visible output.
 
@@ -89,9 +89,11 @@ Thanks to proper error separation, calling an address with no responding device 
 #include <stdio.h>
 
 void i2c_scan_bus(void) {
-    printf("--- I2C1 Bus Scan ---\n");
+    printf("--- I2C1 scanner ---\n");
     printf("     0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F\n");
-    
+
+    uint8_t found = 0;
+
     for (uint8_t i = 0; i < 128; i += 16) {
         printf("%02X: ", i);
         for (uint8_t j = 0; j < 16; j++) {
@@ -103,21 +105,17 @@ void i2c_scan_bus(void) {
                 continue;
             }
             
-            // Attempt START and device address in write mode
-            if (i2c_start() == I2C_OK) {
-                if (i2c_send_addr(addr, I2C_DIR_TX) == I2C_OK) {
-                    printf("%02X ", addr); // Device ACKed!
-                    i2c_stop();            // End transaction only on successful ACK
-                } else {
-                    printf("-- "); // Device NACKed — i2c_send_addr already issued STOP
-                }
+            // i2c_probe_address() handles START, address, and STOP internally
+            if (i2c_probe_address(addr, NULL, NULL) == I2C_OK) {
+                printf("%02X ", addr); // Device ACKed!
+                found++;
             } else {
-                printf("?? "); // START generation error
+                printf("-- "); // No response (NACK)
             }
         }
         printf("\n");
     }
-    printf("--- Scan complete ---\n");
+    printf("--- found: %d ---\n", found);
 }
 ```
 

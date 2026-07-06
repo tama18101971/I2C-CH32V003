@@ -75,7 +75,7 @@ static inline void handle_critical_error(void) {
  * @note  CH32V003 не имеет делителя APB1 (PPRE1 отсутствует в CFGR0),
  *        поэтому PCLK1 == HCLK == SystemCoreClock. Проверка ниже —
  *        страховка от некорректной инициализации тактирования.
- * @return I2C_OK или I2C_ERR_CLK
+ * @return I2C_OK или I2C_ERR_CLK (некорректный SystemCoreClock или i2c_speed==0)
  */
 static uint8_t i2c_configure_registers(void) {
     uint32_t pclk1 = SystemCoreClock;
@@ -85,6 +85,13 @@ static uint8_t i2c_configure_registers(void) {
      * the peripheral specification.  If you see this, the clock tree
      * was not configured before calling i2c_init(). */
     if (pclk1 < 2000000UL || pclk1 > 48000000UL) {
+        return I2C_ERR_CLK;
+    }
+
+    /* Защита от деления на ноль: i2c_speed==0 (например, i2c_init(0))
+     * привёл бы к делению на ноль ниже. Проверяется здесь, а не только
+     * в i2c_init(), чтобы защитить и повторный вызов из i2c_bus_recovery(). */
+    if (i2c_speed == 0) {
         return I2C_ERR_CLK;
     }
 
@@ -291,6 +298,11 @@ uint8_t i2c_stop(void) {
         uint16_t star1 = I2C1->STAR1;
         if (star1 & (I2C_STAR1_BERR | I2C_STAR1_ARLO)) {
             I2C1->STAR1 = (uint16_t)~(I2C_STAR1_BERR | I2C_STAR1_ARLO);
+            /* Как и в i2c_wait_bus_free() (структурно идентичный цикл ожидания
+             * BUSY), аппаратная ошибка требует немедленного восстановления,
+             * а не ожидания полного таймаута. */
+            i2c_bus_recovery();
+            return I2C_NACK;
         }
         if (--timeout == 0) {
             i2c_bus_recovery();
