@@ -1,4 +1,4 @@
-# Reliable I2C (I2C1) Bus Driver for CH32V003 (RISC-V) — Version 5.4.2 (I2C Audit)
+# Reliable I2C (I2C1) Bus Driver for CH32V003 (RISC-V) — Version 5.4.3 (I2C Audit)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -10,7 +10,7 @@ A high-reliability, fault-tolerant, memory-optimized I2C driver for **CH32V003**
 
 ## Architectural Improvements (Based on Deep Fundamental Review)
 
-Version 5.4.2 eliminates all vulnerabilities and long-term stability issues:
+Version 5.4.3 eliminates all vulnerabilities and long-term stability issues:
 
 1. **Symbol encapsulation:** The `i2c_bus_recovery` function is declared `static`, isolated inside `i2c.c` and not exported externally, minimizing the global symbol graph and maximizing GCC inlining opportunities.
 2. **Instant timeout recovery:** Fault handling is split into two independent loops:
@@ -40,18 +40,20 @@ The driver operates with the **I2C1** hardware block on the controller's dedicat
 ## API Reference
 
 ### Low-Level Bus Management and Initialization Functions
-* `void i2c_init(uint32_t bound);`
-  Performs an I2C1 block reset via `SWRST`, configures GPIO and peripheral clocking, and calculates `CTLR2` and `CKCFGR` register values for Standard Mode (up to 100 kHz) or Fast Mode (up to 400 kHz) based on the current `SystemCoreClock`. Automatically sets the mandatory bit 14 in `OADDR1`.
+* `uint8_t i2c_init(uint32_t bound);`
+  Performs an I2C1 block reset via `SWRST`, configures GPIO and peripheral clocking, and calculates `CTLR2` and `CKCFGR` register values for Standard Mode (up to 100 kHz) or Fast Mode (up to 400 kHz) based on the current `SystemCoreClock`. Automatically sets the mandatory bit 14 in `OADDR1`. Returns `I2C_OK` or `I2C_ERR_CLK` if `SystemCoreClock` is outside the valid 2..48 MHz range.
 * `void i2c_deinit(void);`
   Disables the I2C1 peripheral, deactivates the APB1 bus clock, and puts pins PC1/PC2 into a high-impedance state.
 * `uint8_t i2c_wait_bus_free(void);`
-  Polls the `BUSY` flag. If the flag is not cleared within `I2C_TIMEOUT`, the function emergency-calls `i2c_bus_recovery`. Returns `I2C_OK` or `I2C_NACK`.
+  Polls the `BUSY` flag. Also detects `BERR`/`ARLO` hardware errors inside the loop for immediate recovery. If the flag is not cleared within `I2C_TIMEOUT`, the function emergency-calls `i2c_bus_recovery`. Returns `I2C_OK` or `I2C_NACK`.
 * `uint8_t i2c_start(void);`
   Generates a START condition on the bus with a preliminary bus availability check. Timeout-limited.
 * `uint8_t i2c_repeated_start(void);`
   Generates a Repeated START without checking the `BUSY` flag. Used when switching from register address write to data read.
 * `uint8_t i2c_stop(void);`
   Sets the `STOP` bit. Best-effort: returns `I2C_OK` or `I2C_NACK` if bus release fails. On failure, triggers bus recovery internally.
+* `uint8_t i2c_probe_address(uint8_t addr, uint16_t *p_star1, uint16_t *p_star2);`
+  Probes a single 7-bit I2C address. Returns `I2C_OK` if the device ACKed, `I2C_NACK` otherwise. Optionally saves `STAR1`/`STAR2` register values for diagnostics (pass `NULL` to skip). Issues exactly one STOP on both success and failure.
 
 ### Data Transfer Functions
 * `uint8_t i2c_send_addr(uint8_t addr, uint8_t direction);`
@@ -321,7 +323,7 @@ int main(void) {
 }
 ```
 
-#### Version 5.4.2 Advantage for DACs:
+#### Version 5.4.3 Advantage for DACs:
 
 When generating a streaming analog signal (as above), the I2C bus is 100% loaded. If a power motor or relay activates nearby, the standard WCH EVT driver will hard-lock.
 
@@ -341,7 +343,7 @@ If an external device hangs mid-word and holds the SDA line LOW, the master hard
 4. A valid STOP sequence is generated via GPIO: SCL LOW → SDA LOW → SCL HIGH → SDA HIGH.
 5. A hard SWRST reset is issued to the I2C1 block.
 6. PC1 and PC2 are reconfigured back to AF_OD alternate function mode.
-7. The register restore function is called: clock parameters, rise time limits are reloaded, and the hardware ACK control is re-enabled.
+7. The register restore function is called: clock control parameters are reloaded, and the hardware ACK control is re-enabled.
 
 ## Installation and Integration
 
