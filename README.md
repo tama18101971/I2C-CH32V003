@@ -1,4 +1,4 @@
-# Reliable I2C (I2C1) Bus Driver for CH32V003 (RISC-V) — Version 5.4.3 (I2C Audit)
+# Reliable I2C (I2C1) Bus Driver for CH32V003 (RISC-V) — Version 5.5.0 (I2C Audit)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -10,7 +10,7 @@ A high-reliability, fault-tolerant, memory-optimized I2C driver for **CH32V003**
 
 ## Architectural Improvements (Based on Deep Fundamental Review)
 
-Version 5.4.3 eliminates all vulnerabilities and long-term stability issues:
+Version 5.5.0 eliminates all vulnerabilities and long-term stability issues:
 
 1. **Symbol encapsulation:** The `i2c_bus_recovery` function is declared `static`, isolated inside `i2c.c` and not exported externally, minimizing the global symbol graph and maximizing GCC inlining opportunities.
 2. **Instant timeout recovery:** Fault handling is split into two independent loops:
@@ -321,7 +321,7 @@ int main(void) {
 }
 ```
 
-#### Version 5.4.3 Advantage for DACs:
+#### Version 5.5.0 Advantage for DACs:
 
 When generating a streaming analog signal (as above), the I2C bus is 100% loaded. If a power motor or relay activates nearby, the standard WCH EVT driver will hard-lock.
 
@@ -375,6 +375,69 @@ i2c_init(400000); // Fast Mode 400 kHz (or 100000 for Standard Mode)
 ### Complete Example
 
 A full working I2C bus scanner example with a ready-made `platformio.ini` is located in [`examples/i2c_scanner`](examples/i2c_scanner).
+
+---
+
+## Lite Mode (Flash Savings)
+
+For applications with strict Flash budget limits (CH32V003 has only 16 KB), an **Aggressive Lite** mode is provided. It conditionally compiles out portions of the driver — all timeouts remain in place, but on a hardware fault (`BERR`/`ARLO`) or bus stall, functions simply return `I2C_NACK` without attempting hardware bus recovery.
+
+### Enabling
+
+Add to your `platformio.ini`:
+```ini
+build_flags = -DI2C_LITE=1
+```
+
+Or selectively disable only what you don't need:
+```ini
+build_flags =
+    -DI2C_DISABLE_BUS_RECOVERY    ; removes i2c_bus_recovery() (~65 lines)
+    -DI2C_DISABLE_SCANNER          ; removes i2c_probe_address() (~42 lines)
+    -DI2C_DISABLE_BUFFER_API      ; removes i2c_write_buffer()/i2c_read_buffer() (~110 lines)
+    -DI2C_DISABLE_ERROR_COUNTER   ; removes consecutive_errors + handle_critical_error()
+```
+
+`I2C_LITE=1` is equivalent to enabling all four `I2C_DISABLE_*` macros at once. By default (no macro defined or `I2C_LITE=0`), the full fault-tolerant version is built.
+
+### What Lite keeps
+
+| API | Lite | Full |
+|---|:-:|:-:|
+| `i2c_init`, `i2c_deinit` | + | + |
+| `i2c_start`, `i2c_repeated_start`, `i2c_stop` | + | + |
+| `i2c_send_addr`, `i2c_send_byte`, `i2c_wait_ack`, `i2c_write_byte` | + | + |
+| `i2c_wait_bus_free` | + | + |
+| `i2c_write_register`, `i2c_read_register` | + | + |
+| `i2c_probe_address` (scanner) | **−** | + |
+| `i2c_write_buffer`, `i2c_read_buffer` | **−** | + |
+| `i2c_bus_recovery` (Clock Recovery) | **−** | + |
+| `consecutive_errors` counter + `handle_critical_error` | **−** | + |
+
+### Lite error handling behavior
+
+All wait loops remain bounded by `I2C_TIMEOUT` — the driver **never hard-locks** (unlike the WCH EVT library). On `BERR`/`ARLO` or timeout, the function:
+1. Clears the error flag.
+2. Attempts `i2c_stop()` to release the bus (where appropriate).
+3. Returns `I2C_NACK`.
+
+If an external device holds SDA LOW after a fault, the bus stays `BUSY` until the next peripheral reset (`i2c_deinit()`/`i2c_init()` or power cycle). Hardware recovery (16 SCL pulses via GPIO) is only available in the full version.
+
+### Flash savings estimate
+
+Measured on a test project using only `i2c_init` + `i2c_write_register` + `i2c_read_register` + `i2c_deinit` (compiled with `-Os`):
+
+| Mode | Flash | RAM |
+|---|---|---|
+| Full (`I2C_LITE=0`) | 3364 bytes | 456 bytes |
+| Lite (`I2C_LITE=1`) | 2852 bytes | 456 bytes |
+| **Savings** | **~512 bytes (~15%)** | 0 |
+
+For applications that only need register I/O (sensors, EEPROM, DACs), Lite mode frees a meaningful chunk of Flash for user code.
+
+### Compatibility
+
+The `examples/i2c_scanner` example requires `i2c_probe_address` and **does not compile** in Lite mode — this is intentional: the user gets a clear compile/link error (`undefined reference to 'i2c_probe_address'`) rather than a silently degraded API.
 
 ## License
 

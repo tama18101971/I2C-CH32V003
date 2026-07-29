@@ -2,7 +2,7 @@
 #define I2C_H
 
 /*
- * i2c.h — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 5.4.3
+ * i2c.h — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 5.5.0
  *
  * Применение: APDS-9960, DAC7571, EEPROM (24LCxx), OLED (SSD1306) и др.
  * Пин-конфигурация: PC1 — SDA, PC2 — SCL (AF_OD, Open-Drain).
@@ -10,6 +10,24 @@
 
 #include "ch32v00x.h"
 #include <stdint.h>
+
+/* === Конфигурация Lite-режима (экономия Flash) ===
+ * I2C_LITE=1 — Aggressive Lite: убирает bus recovery, сканер, buffer API
+ * и счётчик критических ошибок. Таймаут во всех операциях сохранён,
+ * но при аппаратной ошибке (BERR/ARLO) или зависании шины функция просто
+ * возвращает I2C_NACK без попытки аппаратного восстановления шины.
+ * По умолчанию (I2C_LITE=0 или не задан) — полная отказоустойчивая версия.
+ */
+#ifndef I2C_LITE
+#define I2C_LITE 0
+#endif
+
+#if I2C_LITE
+#define I2C_DISABLE_BUS_RECOVERY
+#define I2C_DISABLE_SCANNER
+#define I2C_DISABLE_BUFFER_API
+#define I2C_DISABLE_ERROR_COUNTER
+#endif
 
 /* Единый таймаут для всех операций */
 #define I2C_TIMEOUT             100000
@@ -36,7 +54,9 @@ uint8_t i2c_repeated_start(void);                         /* Генерация 
 uint8_t i2c_stop(void);                                      /* Генерация STOP с контролем таймаута */
 
 /* Проверка адреса для сканера */
+#ifndef I2C_DISABLE_SCANNER
 uint8_t i2c_probe_address(uint8_t addr, uint16_t *p_star1, uint16_t *p_star2);
+#endif
 
 /* Низкоуровневое API передачи */
 uint8_t i2c_send_addr(uint8_t addr, uint8_t direction);   /* Отправка адреса + направление */
@@ -63,7 +83,9 @@ static inline uint8_t i2c_write_byte(uint8_t data) {
 /* Высокоуровневое симметричное API для работы с регистрами устройств (APDS-9960 и др.) */
 uint8_t i2c_write_register(uint8_t dev_addr, uint8_t reg_addr, uint8_t value);
 uint8_t i2c_read_register(uint8_t dev_addr, uint8_t reg_addr, uint8_t *p_value);
+#ifndef I2C_DISABLE_BUFFER_API
 uint8_t i2c_write_buffer(uint8_t dev_addr, uint8_t reg_addr, const uint8_t *p_buf, uint16_t len);
 uint8_t i2c_read_buffer(uint8_t dev_addr, uint8_t reg_addr, uint8_t *p_buf, uint16_t len);
+#endif
 
 #endif /* I2C_H */

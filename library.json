@@ -1,6 +1,6 @@
 {
   "name": "I2C-CH32V003",
-  "version": "5.4.3",
+  "version": "5.5.0",
   "description": "Fault-tolerant I2C1 driver for CH32V003 (RISC-V) with bus recovery and timeout protection",
   "keywords": "i2c, ch32v003, risc-v, wch, driver",
   "authors": [
