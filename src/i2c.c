@@ -1,5 +1,5 @@
 /*
- * i2c.c — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 5.5.0
+ * i2c.c — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 5.5.1
  */
 
 #include "i2c.h"
@@ -61,7 +61,7 @@ static inline void i2c_usleep(uint32_t us) {
 /**
  * @brief Фиксация аппаратных критических ошибок (ARLO, BERR).
  */
-#if !defined(I2C_DISABLE_ERROR_COUNTER)
+#if !defined(I2C_DISABLE_ERROR_COUNTER) && !defined(I2C_DISABLE_BUS_RECOVERY)
 static inline void handle_critical_error(void) {
     consecutive_errors++;
     if (consecutive_errors >= MAX_ERROR_COUNT) {
@@ -188,7 +188,9 @@ static void i2c_bus_recovery(void) {
     uint32_t busy_timeout = I2C_TIMEOUT;
     while ((I2C1->STAR2 & I2C_STAR2_BUSY) && --busy_timeout);
     
+#if !defined(I2C_DISABLE_ERROR_COUNTER)
     consecutive_errors = 0;
+#endif
 }
 #endif /* !I2C_DISABLE_BUS_RECOVERY */
 
@@ -262,8 +264,10 @@ static uint8_t i2c_wait_start_bit(void) {
         if (star1 & (I2C_STAR1_BERR | I2C_STAR1_ARLO)) {
             I2C1->STAR1 = (uint16_t)~(I2C_STAR1_BERR | I2C_STAR1_ARLO);
             I2C1->CTLR1 &= ~I2C_CTLR1_START;
-#if !defined(I2C_DISABLE_ERROR_COUNTER)
+#if !defined(I2C_DISABLE_ERROR_COUNTER) && !defined(I2C_DISABLE_BUS_RECOVERY)
             handle_critical_error();
+#elif !defined(I2C_DISABLE_BUS_RECOVERY)
+            i2c_bus_recovery();
 #endif
             return I2C_NACK;
         }
@@ -349,8 +353,10 @@ uint8_t i2c_send_addr(uint8_t addr, uint8_t direction) {
         if (star1 & (I2C_STAR1_BERR | I2C_STAR1_ARLO)) {
             I2C1->STAR1 = (uint16_t)~(I2C_STAR1_BERR | I2C_STAR1_ARLO);
             i2c_stop();
-#if !defined(I2C_DISABLE_ERROR_COUNTER)
+#if !defined(I2C_DISABLE_ERROR_COUNTER) && !defined(I2C_DISABLE_BUS_RECOVERY)
             handle_critical_error();
+#elif !defined(I2C_DISABLE_BUS_RECOVERY)
+            i2c_bus_recovery();
 #endif
             return I2C_NACK;
         }
@@ -404,13 +410,21 @@ uint8_t i2c_probe_address(uint8_t addr, uint16_t *p_star1, uint16_t *p_star2) {
         if (star1 & (I2C_STAR1_BERR | I2C_STAR1_ARLO)) {
             I2C1->STAR1 = (uint16_t)~(I2C_STAR1_BERR | I2C_STAR1_ARLO);
             i2c_stop();
+#if !defined(I2C_DISABLE_ERROR_COUNTER) && !defined(I2C_DISABLE_BUS_RECOVERY)
             handle_critical_error();
+#elif !defined(I2C_DISABLE_BUS_RECOVERY)
+            i2c_bus_recovery();
+#endif
             if (p_star1) *p_star1 = I2C1->STAR1;
             if (p_star2) *p_star2 = I2C1->STAR2;
             return I2C_NACK;
         }
         if (--timeout == 0) {
+#if !defined(I2C_DISABLE_BUS_RECOVERY)
             i2c_bus_recovery();
+#else
+            i2c_stop();
+#endif
             if (p_star1) *p_star1 = I2C1->STAR1;
             if (p_star2) *p_star2 = I2C1->STAR2;
             return I2C_NACK;
@@ -444,8 +458,10 @@ uint8_t i2c_send_byte(uint8_t data) {
         if (star1 & (I2C_STAR1_BERR | I2C_STAR1_ARLO)) {
             I2C1->STAR1 = (uint16_t)~(I2C_STAR1_BERR | I2C_STAR1_ARLO);
             i2c_stop();
-#if !defined(I2C_DISABLE_ERROR_COUNTER)
+#if !defined(I2C_DISABLE_ERROR_COUNTER) && !defined(I2C_DISABLE_BUS_RECOVERY)
             handle_critical_error();
+#elif !defined(I2C_DISABLE_BUS_RECOVERY)
+            i2c_bus_recovery();
 #endif
             return I2C_NACK;
         }
@@ -475,8 +491,10 @@ uint8_t i2c_wait_ack(void) {
         if (star1 & (I2C_STAR1_BERR | I2C_STAR1_ARLO)) {
             I2C1->STAR1 = (uint16_t)~(I2C_STAR1_BERR | I2C_STAR1_ARLO);
             i2c_stop();
-#if !defined(I2C_DISABLE_ERROR_COUNTER)
+#if !defined(I2C_DISABLE_ERROR_COUNTER) && !defined(I2C_DISABLE_BUS_RECOVERY)
             handle_critical_error();
+#elif !defined(I2C_DISABLE_BUS_RECOVERY)
+            i2c_bus_recovery();
 #endif
             return I2C_NACK;
         }
@@ -517,8 +535,10 @@ static uint8_t i2c_wait_flag_or_recover(uint16_t flag) {
             I2C1->STAR1 = (uint16_t)~(I2C_STAR1_BERR | I2C_STAR1_ARLO);
             I2C1->CTLR1 |= I2C_CTLR1_ACK;
             i2c_stop();
-#if !defined(I2C_DISABLE_ERROR_COUNTER)
+#if !defined(I2C_DISABLE_ERROR_COUNTER) && !defined(I2C_DISABLE_BUS_RECOVERY)
             handle_critical_error();
+#elif !defined(I2C_DISABLE_BUS_RECOVERY)
+            i2c_bus_recovery();
 #endif
             return I2C_NACK;
         }

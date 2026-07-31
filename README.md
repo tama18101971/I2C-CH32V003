@@ -1,4 +1,4 @@
-# Reliable I2C (I2C1) Bus Driver for CH32V003 (RISC-V) — Version 5.5.0 (I2C Audit)
+# Reliable I2C (I2C1) Bus Driver for CH32V003 (RISC-V) — Version 5.5.1 (I2C Audit)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -423,17 +423,33 @@ All wait loops remain bounded by `I2C_TIMEOUT` — the driver **never hard-locks
 
 If an external device holds SDA LOW after a fault, the bus stays `BUSY` until the next peripheral reset (`i2c_deinit()`/`i2c_init()` or power cycle). Hardware recovery (16 SCL pulses via GPIO) is only available in the full version.
 
-### Flash savings estimate
+### Measured Flash savings
 
-Measured on a test project using only `i2c_init` + `i2c_write_register` + `i2c_read_register` + `i2c_deinit` (compiled with `-Os`):
+The results below come from `pio run -d examples/size_benchmark` on a
+`genericCH32V003F4P6` with PlatformIO `ch32v 1.1.0`, the NoneOS SDK, and a
+release build. The minimal benchmark deliberately excludes `printf`, UART, and
+bus scanning while retaining `i2c_init`, `i2c_write_register`,
+`i2c_read_register`, and `i2c_deinit` in the link.
 
-| Mode | Flash | RAM |
-|---|---|---|
-| Full (`I2C_LITE=0`) | 3364 bytes | 456 bytes |
-| Lite (`I2C_LITE=1`) | 2852 bytes | 456 bytes |
-| **Savings** | **~512 bytes (~15%)** | 0 |
+| Profile | Build flags | Flash | RAM | Flash change |
+|---|---|---:|---:|---:|
+| Full | — | 2644 B | 284 B | — |
+| No recovery | `I2C_DISABLE_BUS_RECOVERY` | 2172 B | 284 B | **−472 B** |
+| No error counter | `I2C_DISABLE_ERROR_COUNTER` | 2552 B | 284 B | −92 B |
+| No buffer API | `I2C_DISABLE_BUFFER_API` | 2608 B | 284 B | −36 B |
+| Lite | `I2C_LITE=1` | 2140 B | 284 B | **−504 B** |
 
-For applications that only need register I/O (sensors, EEPROM, DACs), Lite mode frees a meaningful chunk of Flash for user code.
+All `I2C_DISABLE_*` flags can be used independently: the no-error-counter
+profile keeps recovery, but performs it immediately after a hardware error
+instead of after two consecutive `BERR`/`ARLO` errors. Disabling GPIO bus recovery provides the largest reduction. The benchmark does
+not call the buffer API, so linker garbage collection already removes nearly all
+of it from the Full build. An application that calls `i2c_read_buffer()` or
+`i2c_write_buffer()` will save more with `I2C_DISABLE_BUFFER_API`, but those APIs
+will no longer be available.
+
+For register-I/O-only applications (sensors, EEPROM, DACs), Lite mode frees
+about 0.5 KiB of Flash. Re-run the measurement with your SDK/compiler version
+from `examples/size_benchmark`.
 
 ### Compatibility
 
