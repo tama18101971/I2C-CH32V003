@@ -1,4 +1,4 @@
-# Reliable I2C (I2C1) Bus Driver for CH32V003 (RISC-V) — Version 5.0.0 (I2C Audit)
+# Reliable I2C (I2C1) Bus Driver for CH32V003 (RISC-V) — Version 6.0.0 (I2C Audit)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 

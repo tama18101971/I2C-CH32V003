@@ -1,4 +1,4 @@
-# Надёжный драйвер шины I2C (I2C1) для CH32V003 (RISC-V) — Версия 5.6.0 (Аудит I2C)
+# Надёжный драйвер шины I2C (I2C1) для CH32V003 (RISC-V) — Версия 6.0.0 (Аудит I2C)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
