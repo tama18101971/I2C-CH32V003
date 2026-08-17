@@ -8,9 +8,10 @@ A high-reliability, fault-tolerant, memory-optimized I2C driver for **CH32V003**
 
 ---
 
-## Architectural Improvements (Based on Deep Fundamental Review)
+## Architectural Improvements
 
-Version 5.5.0 eliminates all vulnerabilities and long-term stability issues:
+Version 6.0.0 delivers a **~25% flash-footprint reduction** (see [CHANGELOG](CHANGELOG.md))
+on top of a driver already hardened against bus faults and hard lockups:
 
 1. **Symbol encapsulation:** The `i2c_bus_recovery` function is declared `static`, isolated inside `i2c.c` and not exported externally, minimizing the global symbol graph and maximizing GCC inlining opportunities.
 2. **Instant timeout recovery:** Fault handling is split into two independent loops:
@@ -23,6 +24,15 @@ Version 5.5.0 eliminates all vulnerabilities and long-term stability issues:
 7. **Magic number elimination:** The clock stretching hold time is defined as a named constant `#define I2C_STRETCH_TIMEOUT 1000`.
 8. **Compact, predictable micro-delays:** Heavy, unpredictable `for` loops with `volatile uint32_t` are replaced by a compact delay generator based on `__asm volatile("nop")` instructions, guaranteeing stable GPIO pulse timing regardless of compiler optimization level (`-O0`, `-Os`, `-O3`).
 9. **Full high-level API symmetry:** A complete sequential buffer write function `i2c_write_buffer()` is added. Both register write and buffer write now use a unified, byte-by-byte control mechanism underneath.
+10. **Unified STAR1 wait automaton (v6.0.0):** A single internal helper `i2c_wait_star1_flag()`
+    centralizes flag polling, `BERR`/`ARLO` detection, `AF` handling and timeout recovery across
+    all wait loops, eliminating ~250–350 B of duplicated machine code.
+11. **Optimized delays & clock setup (v6.0.0):** `i2c_usleep()`/`i2c_delay()` use register-backed
+    `nop` loops without stack-backed counters or runtime 32-bit division (frequency is read from the
+    programmed `I2C1->CTLR2`); `i2c_configure_registers()` computes the CCR divisor in a single path.
+12. **Compact GPIO management & unified build (v6.0.0):** A single `i2c_set_gpio_mode()` helper
+    removes repeated `GPIOC->CFGLR` read-modify-write sequences, and a root `platformio.ini`
+    builds every example/benchmark with one command.
 
 ---
 
@@ -321,7 +331,7 @@ int main(void) {
 }
 ```
 
-#### Version 5.5.0 Advantage for DACs:
+#### Driver Advantage for DACs (fault tolerance):
 
 When generating a streaming analog signal (as above), the I2C bus is 100% loaded. If a power motor or relay activates nearby, the standard WCH EVT driver will hard-lock.
 
@@ -372,9 +382,20 @@ Initialize the bus in `main()`:
 i2c_init(400000); // Fast Mode 400 kHz (or 100000 for Standard Mode)
 ```
 
-### Complete Example
+### Complete Examples
 
-A full working I2C bus scanner example with a ready-made `platformio.ini` is located in [`examples/i2c_scanner`](examples/i2c_scanner).
+A full working I2C bus scanner example with a ready-made `platformio.ini` is located in
+[`examples/i2c_scanner`](examples/i2c_scanner). A minimal flash-size benchmark lives in
+[`examples/size_benchmark`](examples/size_benchmark).
+
+The repository also ships a **unified root `platformio.ini`** — build any example or benchmark
+directly from the root with a single command:
+
+```sh
+pio run -e scanner        # I2C bus scanner
+pio run -e benchmark_full # flash-size benchmark (Full build)
+pio run -e benchmark_lite # flash-size benchmark (Lite build)
+```
 
 ---
 
@@ -392,9 +413,9 @@ build_flags = -DI2C_LITE=1
 Or selectively disable only what you don't need:
 ```ini
 build_flags =
-    -DI2C_DISABLE_BUS_RECOVERY    ; removes i2c_bus_recovery() (~65 lines)
-    -DI2C_DISABLE_SCANNER          ; removes i2c_probe_address() (~42 lines)
-    -DI2C_DISABLE_BUFFER_API      ; removes i2c_write_buffer()/i2c_read_buffer() (~110 lines)
+    -DI2C_DISABLE_BUS_RECOVERY    ; removes i2c_bus_recovery()
+    -DI2C_DISABLE_SCANNER          ; removes i2c_probe_address()
+    -DI2C_DISABLE_BUFFER_API      ; removes i2c_write_buffer()/i2c_read_buffer()
     -DI2C_DISABLE_ERROR_COUNTER   ; removes consecutive_errors + handle_critical_error()
 ```
 
@@ -425,7 +446,8 @@ If an external device holds SDA LOW after a fault, the bus stays `BUSY` until th
 
 ### Measured Flash savings
 
-The results below come from `pio run -d examples/size_benchmark` on a
+The results below come from `pio run -d examples/size_benchmark` (or the equivalent
+`pio run -e benchmark_*` environments in the root `platformio.ini`) on a
 `genericCH32V003F4P6` with PlatformIO `ch32v 1.1.0`, the NoneOS SDK, and a
 release build. The minimal benchmark deliberately excludes `printf`, UART, and
 bus scanning while retaining `i2c_init`, `i2c_write_register`,
