@@ -1,4 +1,4 @@
-# Надёжный драйвер шины I2C (I2C1) для CH32V003 (RISC-V) — Версия 5.5.1 (Аудит I2C)
+# Надёжный драйвер шины I2C (I2C1) для CH32V003 (RISC-V) — Версия 5.6.0 (Аудит I2C)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -432,11 +432,11 @@ build_flags =
 
 | Профиль | Build flags | Flash | RAM | Изменение Flash |
 |---|---|---:|---:|---:|
-| Full | — | 2644 B | 284 B | — |
-| Без recovery | `I2C_DISABLE_BUS_RECOVERY` | 2172 B | 284 B | **−472 B** |
-| Без счётчика ошибок | `I2C_DISABLE_ERROR_COUNTER` | 2552 B | 284 B | −92 B |
-| Без buffer API | `I2C_DISABLE_BUFFER_API` | 2608 B | 284 B | −36 B |
-| Lite | `I2C_LITE=1` | 2140 B | 284 B | **−504 B** |
+| Full | — | 2200 B | 284 B | — |
+| Без recovery | `I2C_DISABLE_BUS_RECOVERY` | 1900 B | 284 B | **−300 B** |
+| Без счётчика ошибок | `I2C_DISABLE_ERROR_COUNTER` | 2124 B | 284 B | −76 B |
+| Без buffer API | `I2C_DISABLE_BUFFER_API` | 2168 B | 284 B | −32 B |
+| Lite | `I2C_LITE=1` | 1808 B | 284 B | **−392 B** |
 
 Все `I2C_DISABLE_*` можно применять независимо: профиль без счётчика ошибок
 сохраняет recovery, но выполняет его сразу при аппаратной ошибке, а не после
