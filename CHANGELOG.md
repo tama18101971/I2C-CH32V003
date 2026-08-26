@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [7.0.1] - 2026-08-26
+
+### 🐛 Fixed
+- **Empty-length reads** — `i2c_read_buffer()`, `i2c_read_raw()` and `i2c_read_buffer16()`
+  with `len == 0` now return `I2C_OK` immediately without touching the bus.
+  Previously such a call emitted an unspecific START→STOP sequence without addressing
+  any slave (v6 behavior for `i2c_read_buffer` was "no bus activity at all").
+  The internal RX engine now documents its `len >= 1` precondition explicitly.
+- **Legacy status switch documented** — the `I2C_LEGACY_STATUS` opt-out is now declared
+  and explained in `i2c.h` configuration section (defaults to `0`; define
+  `-DI2C_LEGACY_STATUS=1` to restore v6 behavior where all errors collapse into
+  a single `I2C_NACK`). The runtime check was simplified accordingly.
+
+### 📚 Documentation
+- Restored the complete DAC7571 examples in both READMEs: write protocol description,
+  step-by-step low-level variant (`dac7571_set_voltage_ll`) and `dac7571_power_down()`.
+  Added a note that the low-level path is the only option when building in Lite mode
+  (`I2C_DISABLE_BUFFER_API`), since raw/buffer APIs are compiled out there.
+
+Flash/RAM footprints are unchanged: 2268 B Full / 1844 B Lite on `genericCH32V003F4P6`.
+
 ## [7.0.0] - 2026-08-26
 
 ### 🛡️ Robustness & Safety

@@ -1,5 +1,5 @@
 /*
- * i2c.c — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 7.0.0
+ * i2c.c — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 7.0.1
  */
 
 #include "i2c.h"
@@ -25,7 +25,7 @@
 #endif
 
 /* Отображение статус-кодов (режим legacy сворачивает таймауты и BERR/ARLO в I2C_NACK) */
-#if defined(I2C_LEGACY_STATUS) && I2C_LEGACY_STATUS
+#if I2C_LEGACY_STATUS
 #define I2C_STATUS_TIMEOUT  I2C_NACK
 #define I2C_STATUS_BERR     I2C_NACK
 #define I2C_STATUS_ARLO     I2C_NACK
@@ -500,12 +500,10 @@ static uint8_t i2c_write_bytes(const uint8_t *p_buf, uint16_t len) {
 }
 
 /**
- * @brief Универсальный приемный движок I2C (len 0, 1, 2, >=3) после выставления START/Repeated START
+ * @brief Универсальный приемный движок I2C (len 1, 2, >=3) после выставления START/Repeated START
+ * @note Предусловие: len >= 1 (гарантируется публичным API)
  */
 static uint8_t i2c_read_bytes_rx(uint8_t dev_addr, uint8_t *p_buf, uint16_t len) {
-    if (len == 0) {
-        return i2c_stop();
-    }
     if (len == 1) {
         return i2c_read_1byte(dev_addr, p_buf);
     }
@@ -588,6 +586,8 @@ uint8_t i2c_write_buffer(uint8_t dev_addr, uint8_t reg_addr, const uint8_t *p_bu
  * @brief Пакетное последовательное чтение буфера из регистра
  */
 uint8_t i2c_read_buffer(uint8_t dev_addr, uint8_t reg_addr, uint8_t *p_buf, uint16_t len) {
+    if (len == 0) return I2C_OK; /* Нулевая длина: шина не задействуется */
+
     uint8_t res;
     if ((res = i2c_start_reg_read(dev_addr, reg_addr)) != I2C_OK) {
         return res;
@@ -612,6 +612,8 @@ uint8_t i2c_write_raw(uint8_t dev_addr, const uint8_t *p_buf, uint16_t len) {
  * @brief Raw-чтение буфера без предварительной записи регистра
  */
 uint8_t i2c_read_raw(uint8_t dev_addr, uint8_t *p_buf, uint16_t len) {
+    if (len == 0) return I2C_OK; /* Нулевая длина: шина не задействуется */
+
     uint8_t res;
     if ((res = i2c_start()) != I2C_OK) {
         return res;
@@ -638,6 +640,8 @@ uint8_t i2c_write_buffer16(uint8_t dev_addr, uint16_t reg_addr, const uint8_t *p
  * @brief Пакетное чтение буфера с 16-битным адресом памяти/регистра (EEPROM 24LC32..24LC1025)
  */
 uint8_t i2c_read_buffer16(uint8_t dev_addr, uint16_t reg_addr, uint8_t *p_buf, uint16_t len) {
+    if (len == 0) return I2C_OK; /* Нулевая длина: шина не задействуется */
+
     uint8_t res;
     if ((res = i2c_start()) != I2C_OK ||
         (res = i2c_send_addr(dev_addr, I2C_DIR_TX)) != I2C_OK ||

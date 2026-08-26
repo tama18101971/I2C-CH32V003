@@ -1,4 +1,4 @@
-# Надёжный драйвер шины I2C (I2C1) для CH32V003 (RISC-V) — Версия 7.0.0
+# Надёжный драйвер шины I2C (I2C1) для CH32V003 (RISC-V) — Версия 7.0.1
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -199,7 +199,20 @@ uint8_t load_calibration(uint8_t *p_buf) {
 }
 ```
 
-### Пример 4: Работа с DAC7571 через Raw API
+### Пример 4: Работа с DAC7571
+
+У ЦАП DAC7571 (Texas Instruments) есть важная особенность: в отличие от большинства датчиков, у него нет внутренних адресов регистров. Этот 12-битный одноканальный ЦАП ожидает, что сразу после своего I2C-адреса мастер передаст ровно 2 байта данных. Поэтому стандартная `i2c_write_register()` здесь не подойдёт (она отправляет 3 байта: адрес → регистр → данные).
+
+#### Протокол записи в DAC7571
+
+После отправки адреса устройства (0x4C или 0x4D) ЦАП ждёт два байта:
+
+- **Byte 1 (MSB):** `[ PD1 | PD0 | 0 | 0 | D11 | D10 | D9 | D8 ]` — биты управления питанием + 4 старших бита данных.
+- **Byte 2 (LSB):** `[ D7  | D6  | D5 | D4 | D3  | D2  | D1  | D0 ]` — 8 младших бит данных.
+
+Для нормальной работы биты Power-Down (PD1, PD0) должны быть равны 00.
+
+#### Приоритетный вариант: Raw API (v7.0.0)
 
 ```c
 #include "i2c.h"
@@ -219,6 +232,65 @@ uint8_t dac7571_set_voltage(uint16_t data_12bit) {
     buf[1] = (uint8_t)(data_12bit & 0xFF);        // 8 младших бит
 
     return i2c_write_raw(DAC7571_I2C_ADDR, buf, 2);
+}
+```
+
+#### Альтернатива: Низкоуровневое API (единственный вариант в Lite-режиме)
+
+Lite-сборки (`I2C_LITE=1` / `I2C_DISABLE_BUFFER_API`) исключают raw- и buffer-API из компиляции. Открытая низкоуровневая последовательность остаётся доступной и является там рекомендуемым путём:
+
+```c
+#include "i2c.h"
+
+// Адрес DAC7571 зависит от пина A0:
+// Если A0 подключен к GND, 7-битный адрес = 0x4C (бинарно: 1001100)
+// Если A0 подключен к VDD, 7-битный адрес = 0x4D (бинарно: 1001101)
+#define DAC7571_I2C_ADDR    0x4C
+
+/**
+ * @brief Установка выходного напряжения на ЦАП DAC7571
+ * @param data_12bit: значение от 0 до 4095 (12 бит)
+ * @return I2C_OK или код ошибки
+ */
+uint8_t dac7571_set_voltage_ll(uint16_t data_12bit) {
+    if (data_12bit > 4095) {
+        data_12bit = 4095;
+    }
+
+    uint8_t byte_msb = (uint8_t)((data_12bit >> 8) & 0x0F);
+    uint8_t byte_lsb = (uint8_t)(data_12bit & 0xFF);
+
+    if (i2c_start() != I2C_OK) return I2C_ERR_TIMEOUT;
+
+    if (i2c_send_addr(DAC7571_I2C_ADDR, I2C_DIR_TX) != I2C_OK) {
+        // Если устройство отключено, i2c_send_addr сам сгенерирует STOP
+        return I2C_NACK;
+    }
+
+    if (i2c_write_byte(byte_msb) != I2C_OK) return I2C_NACK;
+    if (i2c_write_byte(byte_lsb) != I2C_OK) return I2C_NACK;
+
+    i2c_stop();
+    return I2C_OK;
+}
+
+/**
+ * @brief Перевод ЦАП в режим сна (Power-Down) для экономии энергии
+ * @param mode: 1 - подтяжка 1 кОм к GND, 2 - 100 кОм к GND, 3 - High-Z
+ */
+uint8_t dac7571_power_down(uint8_t mode) {
+    if (mode < 1 || mode > 3) return I2C_NACK;
+
+    // Сдвигаем режим в биты PD1:PD0 (6-й и 7-й биты первого байта)
+    uint8_t byte_msb = (mode << 6);
+
+    if (i2c_start() != I2C_OK) return I2C_ERR_TIMEOUT;
+    if (i2c_send_addr(DAC7571_I2C_ADDR, I2C_DIR_TX) != I2C_OK) return I2C_NACK;
+    if (i2c_write_byte(byte_msb) != I2C_OK) return I2C_NACK;
+    if (i2c_write_byte(0x00) != I2C_OK) return I2C_NACK; // Второй байт не важен, но обязателен
+    i2c_stop();
+
+    return I2C_OK;
 }
 ```
 

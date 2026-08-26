@@ -1,4 +1,4 @@
-# Reliable I2C (I2C1) Bus Driver for CH32V003 (RISC-V) — Version 7.0.0
+# Reliable I2C (I2C1) Bus Driver for CH32V003 (RISC-V) — Version 7.0.1
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -206,11 +206,20 @@ uint8_t load_calibration(uint8_t *p_buf) {
 }
 ```
 
-### Example 4: Working with the DAC7571 (Raw API)
+### Example 4: Working with the DAC7571
 
-The DAC7571 (Texas Instruments) is a 12-bit single-channel DAC without internal register addresses. It expects the master to transmit 2 data bytes immediately after the I2C address.
+The DAC7571 (Texas Instruments) has one important quirk: unlike most sensors, it has no internal register addresses. This 12-bit single-channel DAC expects the master to transmit exactly 2 data bytes immediately after its I2C address. Therefore the standard `i2c_write_register()` won't work here (it sends 3 bytes: address → register → data).
 
-With version 7.0.0, we use `i2c_write_raw()` directly:
+#### DAC7571 Write Protocol
+
+After sending the device address (0x4C or 0x4D), the DAC expects two bytes:
+
+- **Byte 1 (MSB):** `[ PD1 | PD0 | 0 | 0 | D11 | D10 | D9 | D8 ]` — power control bits + 4 MSBs of data.
+- **Byte 2 (LSB):** `[ D7  | D6  | D5 | D4 | D3  | D2  | D1  | D0 ]` — 8 LSBs of data.
+
+For normal operation, Power-Down bits (PD1, PD0) must be 00.
+
+#### Preferred Approach: Raw API (v7.0.0)
 
 ```c
 #include "i2c.h"
@@ -230,6 +239,65 @@ uint8_t dac7571_set_voltage(uint16_t data_12bit) {
     buf[1] = (uint8_t)(data_12bit & 0xFF);        // 8 LSBs
 
     return i2c_write_raw(DAC7571_I2C_ADDR, buf, 2);
+}
+```
+
+#### Alternative: Low-Level API (required in Lite Mode)
+
+Lite builds (`I2C_LITE=1` / `I2C_DISABLE_BUFFER_API`) compile out the raw and buffer APIs. The open low-level sequence remains available and is the recommended path there:
+
+```c
+#include "i2c.h"
+
+// DAC7571 address depends on the A0 pin:
+// If A0 is tied to GND, 7-bit address = 0x4C (binary: 1001100)
+// If A0 is tied to VDD, 7-bit address = 0x4D (binary: 1001101)
+#define DAC7571_I2C_ADDR    0x4C
+
+/**
+ * @brief Set the output voltage on the DAC7571
+ * @param data_12bit: value from 0 to 4095 (12 bits)
+ * @return I2C_OK or error code
+ */
+uint8_t dac7571_set_voltage_ll(uint16_t data_12bit) {
+    if (data_12bit > 4095) {
+        data_12bit = 4095;
+    }
+
+    uint8_t byte_msb = (uint8_t)((data_12bit >> 8) & 0x0F);
+    uint8_t byte_lsb = (uint8_t)(data_12bit & 0xFF);
+
+    if (i2c_start() != I2C_OK) return I2C_ERR_TIMEOUT;
+
+    if (i2c_send_addr(DAC7571_I2C_ADDR, I2C_DIR_TX) != I2C_OK) {
+        // If the device is disconnected, i2c_send_addr generates STOP itself
+        return I2C_NACK;
+    }
+
+    if (i2c_write_byte(byte_msb) != I2C_OK) return I2C_NACK;
+    if (i2c_write_byte(byte_lsb) != I2C_OK) return I2C_NACK;
+
+    i2c_stop();
+    return I2C_OK;
+}
+
+/**
+ * @brief Put the DAC into power-down mode to save energy
+ * @param mode: 1 - 1 kΩ pull-down to GND, 2 - 100 kΩ pull-down to GND, 3 - High-Z
+ */
+uint8_t dac7571_power_down(uint8_t mode) {
+    if (mode < 1 || mode > 3) return I2C_NACK;
+
+    // Shift mode into PD1:PD0 bits (bits 6-7 of the first byte)
+    uint8_t byte_msb = (mode << 6);
+
+    if (i2c_start() != I2C_OK) return I2C_ERR_TIMEOUT;
+    if (i2c_send_addr(DAC7571_I2C_ADDR, I2C_DIR_TX) != I2C_OK) return I2C_NACK;
+    if (i2c_write_byte(byte_msb) != I2C_OK) return I2C_NACK;
+    if (i2c_write_byte(0x00) != I2C_OK) return I2C_NACK; // Second byte is unused but required
+    i2c_stop();
+
+    return I2C_OK;
 }
 ```
 
