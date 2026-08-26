@@ -1,5 +1,5 @@
 /*
- * i2c.c — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 6.0.0
+ * i2c.c — Универсальный отказоустойчивый драйвер I2C1 для CH32V003 — Версия 7.0.0
  */
 
 #include "i2c.h"
@@ -24,8 +24,20 @@
 #define MAX_ERROR_COUNT        2
 #endif
 
+/* Отображение статус-кодов (режим legacy сворачивает таймауты и BERR/ARLO в I2C_NACK) */
+#if defined(I2C_LEGACY_STATUS) && I2C_LEGACY_STATUS
+#define I2C_STATUS_TIMEOUT  I2C_NACK
+#define I2C_STATUS_BERR     I2C_NACK
+#define I2C_STATUS_ARLO     I2C_NACK
+#else
+#define I2C_STATUS_TIMEOUT  I2C_ERR_TIMEOUT
+#define I2C_STATUS_BERR     I2C_ERR_BERR
+#define I2C_STATUS_ARLO     I2C_ERR_ARLO
+#endif
+
 /* Глобальные статические переменные драйвера */
 static uint32_t i2c_speed = 100000;
+static uint32_t i2c_timeout_loops = 100000;
 #if !defined(I2C_DISABLE_ERROR_COUNTER)
 static uint8_t consecutive_errors = 0;
 #endif
@@ -78,14 +90,15 @@ static inline void handle_critical_error(void) {
 /**
  * @brief Обработчик аппаратных ошибок BERR/ARLO с вызовом recovery.
  */
-static uint8_t i2c_handle_error(void) {
+static uint8_t i2c_handle_error(uint16_t star1) {
+    uint8_t status = (star1 & I2C_STAR1_ARLO) ? I2C_STATUS_ARLO : I2C_STATUS_BERR;
     I2C1->STAR1 = (uint16_t)~(I2C_STAR1_BERR | I2C_STAR1_ARLO);
 #if !defined(I2C_DISABLE_ERROR_COUNTER) && !defined(I2C_DISABLE_BUS_RECOVERY)
     handle_critical_error();
 #elif !defined(I2C_DISABLE_BUS_RECOVERY)
     i2c_bus_recovery();
 #endif
-    return I2C_NACK;
+    return status;
 }
 
 /**
@@ -95,19 +108,25 @@ static uint8_t i2c_handle_timeout(void) {
 #if !defined(I2C_DISABLE_BUS_RECOVERY)
     i2c_bus_recovery();
 #endif
-    return I2C_NACK;
+    return I2C_STATUS_TIMEOUT;
 }
 
 /**
  * @brief Вспомогательная функция конфигурации регистров тактирования I2C
- * @return I2C_OK или I2C_ERR_CLK (некорректный SystemCoreClock или i2c_speed==0)
+ * @return I2C_OK или I2C_ERR_CLK (некорректный SystemCoreClock, speed > 400kHz или i2c_speed==0)
  */
 static uint8_t i2c_configure_registers(void) {
     uint32_t pclk1 = SystemCoreClock;
 
-    /* CH32V003 I2C: SYSCLK must be in [2 MHz, 48 MHz] range. */
-    if (pclk1 < 2000000UL || pclk1 > 48000000UL || i2c_speed == 0) {
+    /* CH32V003 I2C: SYSCLK must be in [2 MHz, 48 MHz] range, speed in [1, 400000] Hz. */
+    if (pclk1 < 2000000UL || pclk1 > 48000000UL || i2c_speed == 0 || i2c_speed > 400000UL) {
         return I2C_ERR_CLK;
+    }
+
+    /* Вычисление масштабированного числа итераций таймаута (~16 тактов на итерацию цикла) */
+    i2c_timeout_loops = ((pclk1 / 1000UL) * (uint32_t)I2C_TIMEOUT_MS) / 16UL;
+    if (i2c_timeout_loops < 100UL) {
+        i2c_timeout_loops = 100UL;
     }
 
     I2C1->CTLR2 = (uint16_t)(pclk1 / 1000000UL);
@@ -195,7 +214,7 @@ static void i2c_bus_recovery(void) {
     I2C1->STAR1 = (uint16_t)~(I2C_STAR1_AF | I2C_STAR1_ARLO | I2C_STAR1_BERR);
     
     /* Ожидание очистки аппаратного флага BUSY цифровым фильтром периферии */
-    uint32_t busy_timeout = I2C_TIMEOUT;
+    uint32_t busy_timeout = i2c_timeout_loops;
     while ((I2C1->STAR2 & I2C_STAR2_BUSY) && --busy_timeout);
     
 #if !defined(I2C_DISABLE_ERROR_COUNTER)
@@ -235,11 +254,11 @@ uint8_t i2c_init(uint32_t bound) {
  * @brief Общий цикл ожидания снятия флага BUSY с обработкой ошибок и recovery.
  */
 static uint8_t i2c_wait_busy_clear(void) {
-    uint32_t timeout = I2C_TIMEOUT;
+    uint32_t timeout = i2c_timeout_loops;
     while (I2C1->STAR2 & I2C_STAR2_BUSY) {
         uint16_t star1 = I2C1->STAR1;
         if (star1 & (I2C_STAR1_BERR | I2C_STAR1_ARLO)) {
-            return i2c_handle_error();
+            return i2c_handle_error(star1);
         }
         if (--timeout == 0) {
             return i2c_handle_timeout();
@@ -259,12 +278,12 @@ uint8_t i2c_wait_bus_free(void) {
  * @brief Унифицированное ожидание бита флага в STAR1 с контролем ошибок и таймаута
  */
 static uint8_t i2c_wait_star1_flag(uint16_t flag) {
-    uint32_t timeout = I2C_TIMEOUT;
+    uint32_t timeout = i2c_timeout_loops;
     while (!(I2C1->STAR1 & flag)) {
         uint16_t star1 = I2C1->STAR1;
         if (star1 & (I2C_STAR1_BERR | I2C_STAR1_ARLO)) {
             i2c_stop();
-            return i2c_handle_error();
+            return i2c_handle_error(star1);
         }
         if (star1 & I2C_STAR1_AF) {
             I2C1->STAR1 = (uint16_t)~I2C_STAR1_AF;
@@ -291,8 +310,9 @@ static uint8_t i2c_wait_start_bit(void) {
  * @brief Генерация START условия на шине I2C
  */
 uint8_t i2c_start(void) {
-    if (i2c_wait_bus_free() != I2C_OK) {
-        return I2C_NACK;
+    uint8_t res = i2c_wait_bus_free();
+    if (res != I2C_OK) {
+        return res;
     }
 
     return i2c_wait_start_bit();
@@ -307,19 +327,11 @@ uint8_t i2c_repeated_start(void) {
 
 /**
  * @brief Генерация STOP условия с собственным таймаутом
- * @return I2C_OK если шина освободилась, I2C_NACK при таймауте/восстановлении
+ * @return I2C_OK если шина освободилась, иначе код ошибки
  */
 uint8_t i2c_stop(void) {
     I2C1->CTLR1 |= I2C_CTLR1_STOP;
-
-    if (i2c_wait_busy_clear() != I2C_OK) {
-        return I2C_NACK;
-    }
-
-    /* Небольшая пауза между транзакциями — важно при сканировании, когда
-     * следующий START выдаётся немедленно после STOP. */
-    i2c_usleep(I2C_INTER_FRAME_DELAY_US);
-    return I2C_OK;
+    return i2c_wait_busy_clear();
 }
 
 /**
@@ -330,14 +342,19 @@ uint8_t i2c_send_addr(uint8_t addr, uint8_t direction) {
         I2C1->STAR1 = (uint16_t)~I2C_STAR1_AF;
     }
     
-    I2C1->DATAR = (uint16_t)((addr << 1) | direction);
+    I2C1->DATAR = (uint16_t)((addr << 1) | (direction & 1));
 
-    if (i2c_wait_star1_flag(I2C_STAR1_ADDR) != I2C_OK) {
-        return I2C_NACK;
+    uint8_t res = i2c_wait_star1_flag(I2C_STAR1_ADDR);
+    if (res != I2C_OK) {
+        return res;
     }
 
     (void)I2C1->STAR1;
     (void)I2C1->STAR2;
+
+#if !defined(I2C_DISABLE_ERROR_COUNTER)
+    consecutive_errors = 0;
+#endif
 
     return I2C_OK;
 }
@@ -347,7 +364,7 @@ uint8_t i2c_send_addr(uint8_t addr, uint8_t direction) {
  * @param addr 7-битный адрес
  * @param p_star1 указатель для сохранения STAR1 (можно NULL)
  * @param p_star2 указатель для сохранения STAR2 (можно NULL)
- * @return I2C_OK если устройство ответило ACK, иначе I2C_NACK
+ * @return I2C_OK если устройство ответило ACK, иначе код ошибки / I2C_NACK
  */
 #ifndef I2C_DISABLE_SCANNER
 uint8_t i2c_probe_address(uint8_t addr, uint16_t *p_star1, uint16_t *p_star2) {
@@ -363,6 +380,7 @@ uint8_t i2c_probe_address(uint8_t addr, uint16_t *p_star1, uint16_t *p_star2) {
         if (p_star1) *p_star1 = I2C1->STAR1;
         if (p_star2) *p_star2 = I2C1->STAR2;
     }
+    i2c_usleep(I2C_INTER_FRAME_DELAY_US);
     return res;
 }
 #endif /* I2C_DISABLE_SCANNER */
@@ -403,10 +421,11 @@ static uint8_t i2c_wait_flag_or_recover(uint16_t flag) {
  * @brief Начало транзакции записи в регистр устройства (START + dev_addr TX + reg_addr)
  */
 static uint8_t i2c_start_reg_write(uint8_t dev_addr, uint8_t reg_addr) {
-    if (i2c_start() != I2C_OK ||
-        i2c_send_addr(dev_addr, I2C_DIR_TX) != I2C_OK ||
-        i2c_write_byte(reg_addr) != I2C_OK) {
-        return I2C_NACK;
+    uint8_t res;
+    if ((res = i2c_start()) != I2C_OK ||
+        (res = i2c_send_addr(dev_addr, I2C_DIR_TX)) != I2C_OK ||
+        (res = i2c_write_byte(reg_addr)) != I2C_OK) {
+        return res;
     }
     return I2C_OK;
 }
@@ -415,10 +434,31 @@ static uint8_t i2c_start_reg_write(uint8_t dev_addr, uint8_t reg_addr) {
  * @brief Начало транзакции чтения из регистра устройства (START + dev_addr TX + reg_addr + repeated START)
  */
 static uint8_t i2c_start_reg_read(uint8_t dev_addr, uint8_t reg_addr) {
-    if (i2c_start_reg_write(dev_addr, reg_addr) != I2C_OK ||
-        i2c_repeated_start() != I2C_OK) {
-        return I2C_NACK;
+    uint8_t res;
+    if ((res = i2c_start_reg_write(dev_addr, reg_addr)) != I2C_OK ||
+        (res = i2c_repeated_start()) != I2C_OK) {
+        return res;
     }
+    return I2C_OK;
+}
+
+/**
+ * @brief Чтение одного байта после выставления START / Repeated START
+ */
+static uint8_t i2c_read_1byte(uint8_t dev_addr, uint8_t *p_buf) {
+    uint8_t res;
+    I2C1->CTLR1 &= ~I2C_CTLR1_ACK;
+    if ((res = i2c_send_addr(dev_addr, I2C_DIR_RX)) != I2C_OK) {
+        I2C1->CTLR1 |= I2C_CTLR1_ACK;
+        return res;
+    }
+    I2C1->CTLR1 |= I2C_CTLR1_STOP;
+    
+    if ((res = i2c_wait_flag_or_recover(I2C_STAR1_RXNE)) != I2C_OK) {
+        return res;
+    }
+    *p_buf = (uint8_t)I2C1->DATAR;
+    I2C1->CTLR1 |= I2C_CTLR1_ACK;
     return I2C_OK;
 }
 
@@ -426,80 +466,65 @@ static uint8_t i2c_start_reg_read(uint8_t dev_addr, uint8_t reg_addr) {
  * @brief Запись в одиночный 8-битный регистр устройства
  */
 uint8_t i2c_write_register(uint8_t dev_addr, uint8_t reg_addr, uint8_t value) {
-    if (i2c_start_reg_write(dev_addr, reg_addr) != I2C_OK ||
-        i2c_write_byte(value) != I2C_OK) {
-        return I2C_NACK;
+    uint8_t res;
+    if ((res = i2c_start_reg_write(dev_addr, reg_addr)) != I2C_OK ||
+        (res = i2c_write_byte(value)) != I2C_OK) {
+        return res;
     }
-    i2c_stop();
-    return I2C_OK;
+    return i2c_stop();
 }
 
 /**
  * @brief Чтение одиночного 8-битного регистра
  */
 uint8_t i2c_read_register(uint8_t dev_addr, uint8_t reg_addr, uint8_t *p_value) {
-    if (i2c_start_reg_read(dev_addr, reg_addr) != I2C_OK) {
-        return I2C_NACK;
+    uint8_t res;
+    if ((res = i2c_start_reg_read(dev_addr, reg_addr)) != I2C_OK) {
+        return res;
     }
-    
-    I2C1->CTLR1 &= ~I2C_CTLR1_ACK;
-    if (i2c_send_addr(dev_addr, I2C_DIR_RX) != I2C_OK) {
-        I2C1->CTLR1 |= I2C_CTLR1_ACK;
-        return I2C_NACK;
-    }
-    I2C1->CTLR1 |= I2C_CTLR1_STOP;
-    
-    if (i2c_wait_flag_or_recover(I2C_STAR1_RXNE) != I2C_OK) {
-        return I2C_NACK;
-    }
-    *p_value = (uint8_t)I2C1->DATAR;
-    I2C1->CTLR1 |= I2C_CTLR1_ACK;
-    return I2C_OK;
+    return i2c_read_1byte(dev_addr, p_value);
 }
 
-/**
- * @brief Пакетная последовательная запись буфера
- */
 #ifndef I2C_DISABLE_BUFFER_API
-uint8_t i2c_write_buffer(uint8_t dev_addr, uint8_t reg_addr, const uint8_t *p_buf, uint16_t len) {
-    if (i2c_start_reg_write(dev_addr, reg_addr) != I2C_OK) {
-        return I2C_NACK;
-    }
-    
+/**
+ * @brief Внутренний цикл последовательной передачи буфера байтов
+ */
+static uint8_t i2c_write_bytes(const uint8_t *p_buf, uint16_t len) {
     while (len--) {
-        if (i2c_write_byte(*p_buf++) != I2C_OK) {
-            return I2C_NACK;
+        uint8_t res = i2c_write_byte(*p_buf++);
+        if (res != I2C_OK) {
+            return res;
         }
     }
-    
-    i2c_stop();
     return I2C_OK;
 }
 
 /**
- * @brief Пакетное последовательное чтение буфера из регистра
+ * @brief Универсальный приемный движок I2C (len 0, 1, 2, >=3) после выставления START/Repeated START
  */
-uint8_t i2c_read_buffer(uint8_t dev_addr, uint8_t reg_addr, uint8_t *p_buf, uint16_t len) {
-    if (len == 0) return I2C_OK;
-    if (len == 1) return i2c_read_register(dev_addr, reg_addr, p_buf);
-
-    if (i2c_start_reg_read(dev_addr, reg_addr) != I2C_OK) {
-        return I2C_NACK;
+static uint8_t i2c_read_bytes_rx(uint8_t dev_addr, uint8_t *p_buf, uint16_t len) {
+    if (len == 0) {
+        return i2c_stop();
     }
+    if (len == 1) {
+        return i2c_read_1byte(dev_addr, p_buf);
+    }
+
+    uint8_t res;
 
     if (len == 2) {
         I2C1->CTLR1 |= (I2C_CTLR1_ACK | I2C_CTLR1_POS);
 
-        if (i2c_send_addr(dev_addr, I2C_DIR_RX) != I2C_OK) {
+        if ((res = i2c_send_addr(dev_addr, I2C_DIR_RX)) != I2C_OK) {
             I2C1->CTLR1 &= ~I2C_CTLR1_POS;
-            return I2C_NACK;
+            return res;
         }
 
         I2C1->CTLR1 &= ~I2C_CTLR1_ACK;
 
-        if (i2c_wait_flag_or_recover(I2C_STAR1_BTF) != I2C_OK) {
+        if ((res = i2c_wait_flag_or_recover(I2C_STAR1_BTF)) != I2C_OK) {
             I2C1->CTLR1 &= ~I2C_CTLR1_POS;
-            return I2C_NACK;
+            return res;
         }
         I2C1->CTLR1 |= I2C_CTLR1_STOP;
 
@@ -507,42 +532,121 @@ uint8_t i2c_read_buffer(uint8_t dev_addr, uint8_t reg_addr, uint8_t *p_buf, uint
         p_buf[1] = (uint8_t)I2C1->DATAR;
 
         I2C1->CTLR1 &= ~I2C_CTLR1_POS;
-    } 
-    else {
         I2C1->CTLR1 |= I2C_CTLR1_ACK;
-
-        if (i2c_send_addr(dev_addr, I2C_DIR_RX) != I2C_OK) {
-            return I2C_NACK;
-        }
-
-        while (len > 3) {
-            if (i2c_wait_flag_or_recover(I2C_STAR1_RXNE) != I2C_OK) {
-                return I2C_NACK;
-            }
-            *p_buf++ = (uint8_t)I2C1->DATAR;
-            len--;
-        }
-
-        if (i2c_wait_flag_or_recover(I2C_STAR1_BTF) != I2C_OK) {
-            return I2C_NACK;
-        }
-        I2C1->CTLR1 &= ~I2C_CTLR1_ACK;
-        *p_buf++ = (uint8_t)I2C1->DATAR;
-
-        if (i2c_wait_flag_or_recover(I2C_STAR1_BTF) != I2C_OK) {
-            return I2C_NACK;
-        }
-        I2C1->CTLR1 |= I2C_CTLR1_STOP;
-        *p_buf++ = (uint8_t)I2C1->DATAR;
-
-        if (i2c_wait_flag_or_recover(I2C_STAR1_RXNE) != I2C_OK) {
-            return I2C_NACK;
-        }
-        *p_buf = (uint8_t)I2C1->DATAR;
+        return I2C_OK;
     }
+
+    /* len >= 3 */
+    I2C1->CTLR1 |= I2C_CTLR1_ACK;
+
+    if ((res = i2c_send_addr(dev_addr, I2C_DIR_RX)) != I2C_OK) {
+        return res;
+    }
+
+    while (len > 3) {
+        if ((res = i2c_wait_flag_or_recover(I2C_STAR1_RXNE)) != I2C_OK) {
+            return res;
+        }
+        *p_buf++ = (uint8_t)I2C1->DATAR;
+        len--;
+    }
+
+    if ((res = i2c_wait_flag_or_recover(I2C_STAR1_BTF)) != I2C_OK) {
+        return res;
+    }
+    I2C1->CTLR1 &= ~I2C_CTLR1_ACK;
+    *p_buf++ = (uint8_t)I2C1->DATAR;
+
+    if ((res = i2c_wait_flag_or_recover(I2C_STAR1_BTF)) != I2C_OK) {
+        return res;
+    }
+    I2C1->CTLR1 |= I2C_CTLR1_STOP;
+    *p_buf++ = (uint8_t)I2C1->DATAR;
+
+    if ((res = i2c_wait_flag_or_recover(I2C_STAR1_RXNE)) != I2C_OK) {
+        return res;
+    }
+    *p_buf = (uint8_t)I2C1->DATAR;
 
     I2C1->CTLR1 |= I2C_CTLR1_ACK;
     return I2C_OK;
+}
+
+/**
+ * @brief Пакетная последовательная запись буфера
+ */
+uint8_t i2c_write_buffer(uint8_t dev_addr, uint8_t reg_addr, const uint8_t *p_buf, uint16_t len) {
+    uint8_t res;
+    if ((res = i2c_start_reg_write(dev_addr, reg_addr)) != I2C_OK ||
+        (res = i2c_write_bytes(p_buf, len)) != I2C_OK) {
+        return res;
+    }
+    return i2c_stop();
+}
+
+/**
+ * @brief Пакетное последовательное чтение буфера из регистра
+ */
+uint8_t i2c_read_buffer(uint8_t dev_addr, uint8_t reg_addr, uint8_t *p_buf, uint16_t len) {
+    uint8_t res;
+    if ((res = i2c_start_reg_read(dev_addr, reg_addr)) != I2C_OK) {
+        return res;
+    }
+    return i2c_read_bytes_rx(dev_addr, p_buf, len);
+}
+
+/**
+ * @brief Raw-запись буфера без регистрового адреса (DAC7571, потоковый вывод)
+ */
+uint8_t i2c_write_raw(uint8_t dev_addr, const uint8_t *p_buf, uint16_t len) {
+    uint8_t res;
+    if ((res = i2c_start()) != I2C_OK ||
+        (res = i2c_send_addr(dev_addr, I2C_DIR_TX)) != I2C_OK ||
+        (res = i2c_write_bytes(p_buf, len)) != I2C_OK) {
+        return res;
+    }
+    return i2c_stop();
+}
+
+/**
+ * @brief Raw-чтение буфера без предварительной записи регистра
+ */
+uint8_t i2c_read_raw(uint8_t dev_addr, uint8_t *p_buf, uint16_t len) {
+    uint8_t res;
+    if ((res = i2c_start()) != I2C_OK) {
+        return res;
+    }
+    return i2c_read_bytes_rx(dev_addr, p_buf, len);
+}
+
+/**
+ * @brief Пакетная запись буфера с 16-битным адресом памяти/регистра (EEPROM 24LC32..24LC1025)
+ */
+uint8_t i2c_write_buffer16(uint8_t dev_addr, uint16_t reg_addr, const uint8_t *p_buf, uint16_t len) {
+    uint8_t res;
+    if ((res = i2c_start()) != I2C_OK ||
+        (res = i2c_send_addr(dev_addr, I2C_DIR_TX)) != I2C_OK ||
+        (res = i2c_write_byte((uint8_t)(reg_addr >> 8))) != I2C_OK ||
+        (res = i2c_write_byte((uint8_t)(reg_addr & 0xFF))) != I2C_OK ||
+        (res = i2c_write_bytes(p_buf, len)) != I2C_OK) {
+        return res;
+    }
+    return i2c_stop();
+}
+
+/**
+ * @brief Пакетное чтение буфера с 16-битным адресом памяти/регистра (EEPROM 24LC32..24LC1025)
+ */
+uint8_t i2c_read_buffer16(uint8_t dev_addr, uint16_t reg_addr, uint8_t *p_buf, uint16_t len) {
+    uint8_t res;
+    if ((res = i2c_start()) != I2C_OK ||
+        (res = i2c_send_addr(dev_addr, I2C_DIR_TX)) != I2C_OK ||
+        (res = i2c_write_byte((uint8_t)(reg_addr >> 8))) != I2C_OK ||
+        (res = i2c_write_byte((uint8_t)(reg_addr & 0xFF))) != I2C_OK ||
+        (res = i2c_repeated_start()) != I2C_OK) {
+        return res;
+    }
+    return i2c_read_bytes_rx(dev_addr, p_buf, len);
 }
 #endif /* I2C_DISABLE_BUFFER_API */
 

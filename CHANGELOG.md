@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [7.0.0] - 2026-08-26
+
+### 🛡️ Robustness & Safety
+- **C++ Support** — wrapped `i2c.h` in `extern "C"` guards for clean integration into C++ / Arduino projects.
+- **Direction Bit Masking** — `i2c_send_addr()` now enforces `(direction & 1)` to prevent corrupting the 7-bit device address.
+- **Read-Only Workload Error Reset** — `consecutive_errors` counter is now safely cleared upon successful `ADDR` phase ACK in `i2c_send_addr()`, preventing sporadic errors across long read sessions from triggering unintended bus recovery.
+- **Dynamic Clock-Scaled Timeout** — replaced static loop counter with `I2C_TIMEOUT_MS` (default 40 ms) dynamically scaled by `SystemCoreClock` during `i2c_init()`.
+- **Clock & Speed Validation** — `i2c_init()` now rejects invalid speeds `> 400000 Hz` returning `I2C_ERR_CLK`.
+
+### ⚡ Performance
+- **Zero-Delay `i2c_stop()`** — removed mandatory 50 µs inter-frame delay from `i2c_stop()`; moved delay exclusively to `i2c_probe_address()` where inter-probe spacing is needed. This doubles transaction throughput for high-frequency streaming (such as DAC7571 wave generation).
+
+### 🎁 New API
+- **Raw Transfer API** (`i2c_write_raw()`, `i2c_read_raw()`) — direct multi-byte read and write operations without register address preamble for register-less chips (DAC7571, streaming ADCs/DACs).
+- **16-Bit Register Buffer API** (`i2c_write_buffer16()`, `i2c_read_buffer16()`) — multi-byte read/write support with 16-bit big-endian register/word addresses for EEPROMs (24LC32..24LC1025) and advanced sensors.
+- **Granular Return Codes** — distinct return codes `I2C_ERR_TIMEOUT` (2), `I2C_ERR_BERR` (4), `I2C_ERR_ARLO` (5) for better runtime fault diagnostics. Legacy behavior (all errors mapped to `I2C_NACK`) can be selected via `-DI2C_LEGACY_STATUS=1`.
+
+### 🏗️ CI & Quality
+- Added **GitHub Actions CI** (`.github/workflows/ci.yml`) to automatically compile and verify all 6 build configurations on every push and PR.
+
 ## [6.0.0] - 2026-08-17
 
 ### 🚀 Major Flash footprint reduction (~25%)

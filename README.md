@@ -1,4 +1,4 @@
-# Reliable I2C (I2C1) Bus Driver for CH32V003 (RISC-V) — Version 6.0.0 (I2C Audit)
+# Reliable I2C (I2C1) Bus Driver for CH32V003 (RISC-V) — Version 7.0.0
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -8,31 +8,20 @@ A high-reliability, fault-tolerant, memory-optimized I2C driver for **CH32V003**
 
 ---
 
-## Architectural Improvements
+## Architectural Highlights (Version 7.0.0)
 
-Version 6.0.0 delivers a **~25% flash-footprint reduction** (see [CHANGELOG](CHANGELOG.md))
-on top of a driver already hardened against bus faults and hard lockups:
-
-1. **Symbol encapsulation:** The `i2c_bus_recovery` function is declared `static`, isolated inside `i2c.c` and not exported externally, minimizing the global symbol graph and maximizing GCC inlining opportunities.
-2. **Instant timeout recovery:** Fault handling is split into two independent loops:
-   * **Software timeouts (stuck loop):** If the bus is blocked (`BUSY` flag stuck high) or the state machine hangs at `START`/`ADDR`, the driver **immediately** initiates a hardware reset without waiting for repeated errors.
-   * **Hardware faults (`BERR`, `ARLO`):** For sporadic hardware errors (bus error, arbitration loss), an accumulator counter `consecutive_errors` with limit `MAX_ERROR_COUNT = 2` is retained.
-3. **Safe low-level API (`i2c_send_byte`):** The byte send function is cleanly separated from acknowledgment waiting. The documentation strictly warns: `i2c_send_byte` only controls `DATAR` buffer release (`TXE`) but does not complete the physical bus transfer. For atomic sends, the inline function `i2c_write_byte()` is provided.
-4. **Absolute ACK bit protection on faults:** In all software timeout branches of read functions (`i2c_read_register` and `i2c_read_buffer` for all packet lengths: `len==1`, `len==2`, `len>=3`), the `ACK = 1` bit is forcibly restored before exit. This guarantees a transaction that fails mid-read will not break subsequent bus calls.
-5. **RISC-V (RV32EC) data type optimization:** All buffer length parameters are typed as `uint16_t` instead of `uint32_t`. For a microcontroller with 16 KB Flash and a limited register set, this reduces function call overhead and binary code size.
-6. **Critical path inlining:** The `handle_critical_error` function is declared `static inline`, eliminating extra code jumps (`jal`/`jr`) in error handlers.
-7. **Magic number elimination:** The clock stretching hold time is defined as a named constant `#define I2C_STRETCH_TIMEOUT 1000`.
-8. **Compact, predictable micro-delays:** Heavy, unpredictable `for` loops with `volatile uint32_t` are replaced by a compact delay generator based on `__asm volatile("nop")` instructions, guaranteeing stable GPIO pulse timing regardless of compiler optimization level (`-O0`, `-Os`, `-O3`).
-9. **Full high-level API symmetry:** A complete sequential buffer write function `i2c_write_buffer()` is added. Both register write and buffer write now use a unified, byte-by-byte control mechanism underneath.
-10. **Unified STAR1 wait automaton (v6.0.0):** A single internal helper `i2c_wait_star1_flag()`
-    centralizes flag polling, `BERR`/`ARLO` detection, `AF` handling and timeout recovery across
-    all wait loops, eliminating ~250–350 B of duplicated machine code.
-11. **Optimized delays & clock setup (v6.0.0):** `i2c_usleep()`/`i2c_delay()` use register-backed
-    `nop` loops without stack-backed counters or runtime 32-bit division (frequency is read from the
-    programmed `I2C1->CTLR2`); `i2c_configure_registers()` computes the CCR divisor in a single path.
-12. **Compact GPIO management & unified build (v6.0.0):** A single `i2c_set_gpio_mode()` helper
-    removes repeated `GPIOC->CFGLR` read-modify-write sequences, and a root `platformio.ini`
-    builds every example/benchmark with one command.
+1. **C++ Compatibility:** Header `i2c.h` is enclosed in `extern "C"` blocks for direct usage in C++ and Arduino projects without linking issues.
+2. **Zero-Delay Transactions (`i2c_stop`):** Removed fixed 50 µs delay from standard STOP generation. Inter-frame delay is applied strictly within `i2c_probe_address()` during bus scanning, allowing maximum bus throughput (up to 400 kHz) for streaming devices like DACs and displays.
+3. **Dynamic Clock-Scaled Timeout:** Bounded wait loops scale dynamically against `SystemCoreClock` via `I2C_TIMEOUT_MS` (default 40 ms), preventing wildly varying timeout periods between 2 MHz and 48 MHz system clocks.
+4. **Read-Only Workload Protection:** `consecutive_errors` counter resets upon successful `ADDR` phase ACK in `i2c_send_addr()`, preventing sporadic transient hardware errors from accumulating into false bus recovery triggers during long read sessions.
+5. **Raw & 16-Bit Register APIs:** Native `i2c_write_raw()` / `i2c_read_raw()` for register-less devices (DAC7571) and `i2c_write_buffer16()` / `i2c_read_buffer16()` for memories with 16-bit word addresses (24LC32..24LC1025).
+6. **Granular Return Codes:** Distinct status codes (`I2C_ERR_TIMEOUT`, `I2C_ERR_BERR`, `I2C_ERR_ARLO`, `I2C_ERR_CLK`, `I2C_NACK`, `I2C_OK`) with optional legacy fallback `-DI2C_LEGACY_STATUS=1`.
+7. **Bus Speed Validation:** `i2c_init()` validates speed up to 400 kHz and returns `I2C_ERR_CLK` for out-of-spec configurations.
+8. **Symbol encapsulation:** The `i2c_bus_recovery` function is declared `static`, isolated inside `i2c.c` and not exported externally.
+9. **Instant timeout recovery:** Stuck bus loops immediately trigger hardware peripheral recovery without waiting for multiple attempts.
+10. **Safe low-level API (`i2c_send_byte`):** Byte transmission is separated from acknowledgment waiting. For atomic operations, `i2c_write_byte()` is provided.
+11. **Absolute ACK bit protection on faults:** In all failure paths of read functions (`i2c_read_register` and `i2c_read_buffer`), `ACK = 1` is forcibly restored before exit.
+12. **RISC-V (RV32EC) optimization:** Buffer lengths use `uint16_t` to minimize register usage and call overhead on RV32EC.
 
 ---
 
@@ -47,27 +36,42 @@ The driver operates with the **I2C1** hardware block on the controller's dedicat
 
 ---
 
+## Status Codes
+
+| Code | Value | Description |
+|---|:---:|---|
+| `I2C_OK` | `0` | Success / Acknowledged (ACK) |
+| `I2C_NACK` | `1` | Not acknowledged (NACK from slave) or generic error |
+| `I2C_ERR_TIMEOUT` | `2` | Software timeout waiting for bus release or peripheral flag |
+| `I2C_ERR_CLK` | `3` | Invalid clock configuration (PCLK1 outside 2..48 MHz, speed > 400 kHz, or speed == 0) |
+| `I2C_ERR_BERR` | `4` | Bus Error (misplaced START or STOP condition) |
+| `I2C_ERR_ARLO` | `5` | Arbitration Lost (multi-master collision) |
+
+*All non-zero codes evaluate to true on `if (err != I2C_OK)` checks.* To map `TIMEOUT`, `BERR`, and `ARLO` into `I2C_NACK` (v6 behavior), define `-DI2C_LEGACY_STATUS=1`.
+
+---
+
 ## API Reference
 
 ### Low-Level Bus Management and Initialization Functions
 * `uint8_t i2c_init(uint32_t bound);`
-  Performs an I2C1 block reset via `SWRST`, configures GPIO and peripheral clocking, and calculates `CTLR2` and `CKCFGR` register values for Standard Mode (up to 100 kHz) or Fast Mode (up to 400 kHz) based on the current `SystemCoreClock`. Automatically sets the mandatory bit 14 in `OADDR1`. Returns `I2C_OK` or `I2C_ERR_CLK` if `SystemCoreClock` is outside the valid 2..48 MHz range.
+  Performs an I2C1 block reset via `SWRST`, configures GPIO and peripheral clocking, and calculates `CTLR2` and `CKCFGR` register values for Standard Mode (up to 100 kHz) or Fast Mode (up to 400 kHz) based on the current `SystemCoreClock`. Automatically sets the mandatory bit 14 in `OADDR1`. Returns `I2C_OK` or `I2C_ERR_CLK` if `SystemCoreClock` is outside the valid 2..48 MHz range or `bound > 400000`.
 * `void i2c_deinit(void);`
   Disables the I2C1 peripheral, deactivates the APB1 bus clock, and puts pins PC1/PC2 into a high-impedance state.
 * `uint8_t i2c_wait_bus_free(void);`
-  Polls the `BUSY` flag. Also detects `BERR`/`ARLO` hardware errors inside the loop for immediate recovery. If the flag is not cleared within `I2C_TIMEOUT`, the function emergency-calls `i2c_bus_recovery`. Returns `I2C_OK` or `I2C_NACK`.
+  Polls the `BUSY` flag. Also detects `BERR`/`ARLO` hardware errors inside the loop for immediate recovery. If the flag is not cleared within `I2C_TIMEOUT_MS`, the function emergency-calls `i2c_bus_recovery`.
 * `uint8_t i2c_start(void);`
   Generates a START condition on the bus with a preliminary bus availability check. Timeout-limited.
 * `uint8_t i2c_repeated_start(void);`
   Generates a Repeated START without checking the `BUSY` flag. Used when switching from register address write to data read.
 * `uint8_t i2c_stop(void);`
-  Sets the `STOP` bit. Best-effort: returns `I2C_OK` or `I2C_NACK` if bus release fails. On failure, triggers bus recovery internally.
+  Sets the `STOP` bit and waits for the bus to clear. Returns `I2C_OK` on success. On failure, triggers bus recovery internally.
 * `uint8_t i2c_probe_address(uint8_t addr, uint16_t *p_star1, uint16_t *p_star2);`
-  Probes a single 7-bit I2C address. Returns `I2C_OK` if the device ACKed, `I2C_NACK` otherwise. Optionally saves `STAR1`/`STAR2` register values for diagnostics (pass `NULL` to skip). Issues exactly one STOP on both success and failure.
+  Probes a single 7-bit I2C address. Returns `I2C_OK` if the device ACKed, `I2C_NACK` otherwise. Optionally saves `STAR1`/`STAR2` register values for diagnostics (pass `NULL` to skip). Includes inter-frame spacing `I2C_INTER_FRAME_DELAY_US`.
 
 ### Data Transfer Functions
 * `uint8_t i2c_send_addr(uint8_t addr, uint8_t direction);`
-  Sends a 7-bit device address shifted left, combined with the direction bit (`I2C_DIR_TX` or `I2C_DIR_RX`). Clears the `ADDR` flag by reading `STAR1` and `STAR2` registers. Treats `AF` (address NACK) as non-critical.
+  Sends a 7-bit device address shifted left, combined with the direction bit (`I2C_DIR_TX` or `I2C_DIR_RX`). Enforces `direction & 1` masking. Clears the `ADDR` flag by reading `STAR1` and `STAR2` registers and resets `consecutive_errors`.
 * `uint8_t i2c_send_byte(uint8_t data);`
   *Low-level function.* Writes a byte to `DATAR` and waits only for transmit buffer release (`TXE`). **Does not check physical reception by the slave!**
 * `uint8_t i2c_wait_ack(void);`
@@ -77,13 +81,21 @@ The driver operates with the **I2C1** hardware block on the controller's dedicat
 
 ### High-Level Application API
 * `uint8_t i2c_write_register(uint8_t dev_addr, uint8_t reg_addr, uint8_t value);`
-  Writes a single byte `value` to register `reg_addr` of device `dev_addr`.
+  Writes a single byte `value` to 8-bit register `reg_addr` of device `dev_addr`.
 * `uint8_t i2c_read_register(uint8_t dev_addr, uint8_t reg_addr, uint8_t *p_value);`
-  Reads a single byte from a device register. Implements a safe sequence with `ACK` disabled and `STOP` set immediately after sending the read address.
+  Reads a single byte from 8-bit register `reg_addr`.
 * `uint8_t i2c_write_buffer(uint8_t dev_addr, uint8_t reg_addr, const uint8_t *p_buf, uint16_t len);`
-  Sequential write of data array `p_buf` of length `len` starting from register `reg_addr`. Useful for sending configuration tables or display data.
+  Sequential write of data array `p_buf` of length `len` starting from 8-bit register `reg_addr`.
 * `uint8_t i2c_read_buffer(uint8_t dev_addr, uint8_t reg_addr, uint8_t *p_buf, uint16_t len);`
-  Multi-byte streaming read. Implements three distinct hardware algorithms (`len==1`, `len==2`, and `len>=3`) strictly per the I2C IP block vendor (Synopsys/WCH) specifications.
+  Multi-byte streaming read starting from 8-bit register `reg_addr`.
+* `uint8_t i2c_write_raw(uint8_t dev_addr, const uint8_t *p_buf, uint16_t len);`
+  Direct multi-byte write to `dev_addr` without sending a register address. Ideal for DACs, streaming I/O, and register-less devices.
+* `uint8_t i2c_read_raw(uint8_t dev_addr, uint8_t *p_buf, uint16_t len);`
+  Direct multi-byte read from `dev_addr` without sending a register address preamble.
+* `uint8_t i2c_write_buffer16(uint8_t dev_addr, uint16_t reg_addr, const uint8_t *p_buf, uint16_t len);`
+  Sequential write with a 16-bit big-endian register/word address `reg_addr` (for EEPROMs 24LC32..24LC1025).
+* `uint8_t i2c_read_buffer16(uint8_t dev_addr, uint16_t reg_addr, uint8_t *p_buf, uint16_t len);`
+  Multi-byte streaming read with a 16-bit big-endian register/word address `reg_addr`.
 
 ---
 
@@ -171,187 +183,95 @@ void handle_gesture_sensor(void) {
 }
 ```
 
-### Example 3: Writing a Configuration Block to EEPROM (24LCxx)
+### Example 3: Writing a Configuration Block to EEPROM (24LC64 / 24LCxx)
 
-Demonstrates use of the symmetric `i2c_write_buffer` function to send a page of data to non-volatile memory.
+Demonstrates using `i2c_write_buffer16` to write a block to an EEPROM with a 16-bit word address.
 
 ```c
 #include "i2c.h"
 
-#define EEPROM_I2C_ADDR    0x50 // 24LC64 base address
-#define PAGE_START_ADDR    0x00 // Memory cell address inside EEPROM
+#define EEPROM_I2C_ADDR    0x50     // 24LC64 base address
+#define PAGE_START_ADDR    0x0020   // 16-bit memory cell address inside EEPROM
 
 static const uint8_t calibration_table[8] = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0};
 
 uint8_t save_calibration(void) {
-    // The function automatically generates START, transmits the memory address,
-    // sends the internal register/cell address PAGE_START_ADDR,
-    // sequentially clocks out all 8 array bytes with per-byte ACK checking, and ends via STOP.
-    return i2c_write_buffer(EEPROM_I2C_ADDR, PAGE_START_ADDR, calibration_table, 8);
+    // Sends: START -> 0x50(TX) -> Addr_High -> Addr_Low -> Data[0..7] -> STOP
+    return i2c_write_buffer16(EEPROM_I2C_ADDR, PAGE_START_ADDR, calibration_table, 8);
+}
+
+uint8_t load_calibration(uint8_t *p_buf) {
+    // Sends: START -> 0x50(TX) -> Addr_High -> Addr_Low -> Repeated START -> 0x50(RX) -> Read[0..7] -> STOP
+    return i2c_read_buffer16(EEPROM_I2C_ADDR, PAGE_START_ADDR, p_buf, 8);
 }
 ```
 
-### Example 4: Working with the DAC7571
+### Example 4: Working with the DAC7571 (Raw API)
 
-The DAC7571 (Texas Instruments) has one important quirk you need to account for when using our driver.
+The DAC7571 (Texas Instruments) is a 12-bit single-channel DAC without internal register addresses. It expects the master to transmit 2 data bytes immediately after the I2C address.
 
-Unlike most sensors (such as APDS-9960), the DAC7571 has no internal register addresses. This chip is a 12-bit single-channel DAC that expects the master to transmit exactly 2 data bytes immediately after its I2C address, containing the operating mode configuration and the 12-bit voltage value.
-
-Therefore, the standard `i2c_write_register` function won't work (it sends 3 bytes: address → register → data). However, because we keep the low-level API open in `i2c.h`, working with the DAC7571 becomes straightforward and elegant.
-
-#### DAC7571 Write Protocol
-
-After sending the device address (0x4C or 0x4D), the DAC expects two bytes:
-
-- **Byte 1 (MSB):** `[ PD1 | PD0 | 0 | 0 | D11 | D10 | D9 | D8 ]` — power control bits + 4 MSBs of data.
-- **Byte 2 (LSB):** `[ D7  | D6  | D5| D4| D3  | D2  | D1  | D0 ]` — 8 LSBs of data.
-
-For normal operation, Power-Down bits (PD1, PD0) must be 00.
-
-#### Preferred Approach: Using the Low-Level API
-
-This is the most transparent and architecturally correct way to work with register-less devices.
+With version 7.0.0, we use `i2c_write_raw()` directly:
 
 ```c
 #include "i2c.h"
 
-// DAC7571 address depends on the A0 pin:
-// If A0 is tied to GND, 7-bit address = 0x4C (binary: 1001100)
-// If A0 is tied to VDD, 7-bit address = 0x4D (binary: 1001101)
 #define DAC7571_I2C_ADDR    0x4C
 
 /**
  * @brief Set the output voltage on the DAC7571
  * @param data_12bit: value from 0 to 4095 (12 bits)
- * @return I2C_OK or I2C_NACK
+ * @return I2C_OK or error code
  */
 uint8_t dac7571_set_voltage(uint16_t data_12bit) {
-    // 1. Clamp to 12-bit resolution
-    if (data_12bit > 4095) {
-        data_12bit = 4095;
-    }
-
-    // 2. Form two bytes per TI specification
-    // MSB: PD1=0, PD0=0 (Normal Mode), then 4 MSBs of data
-    uint8_t byte_msb = (uint8_t)((data_12bit >> 8) & 0x0F);
-    // LSB: remaining 8 data bits
-    uint8_t byte_lsb = (uint8_t)(data_12bit & 0xFF);
-
-    // 3. Low-level transaction with step-by-step error control
-    if (i2c_start() != I2C_OK) return I2C_NACK;
-    
-    if (i2c_send_addr(DAC7571_I2C_ADDR, I2C_DIR_TX) != I2C_OK) {
-        // If the device is disconnected, i2c_send_addr generates STOP itself
-        return I2C_NACK; 
-    }
-    
-    // Send MSB and wait for ACK
-    if (i2c_write_byte(byte_msb) != I2C_OK) return I2C_NACK;
-    
-    // Send LSB and wait for ACK
-    if (i2c_write_byte(byte_lsb) != I2C_OK) return I2C_NACK;
-    
-    // Successful transaction complete
-    i2c_stop();
-    return I2C_OK;
-}
-
-/**
- * @brief Put the DAC into power-down mode to save energy
- * @param mode: 1 - 1 kΩ pull-down to GND, 2 - 100 kΩ pull-down to GND, 3 - High-Z
- */
-uint8_t dac7571_power_down(uint8_t mode) {
-    if (mode < 1 || mode > 3) return I2C_NACK;
-    
-    // Shift mode into PD1:PD0 bits (bits 6-7 of the first byte)
-    uint8_t byte_msb = (mode << 6); 
-    
-    if (i2c_start() != I2C_OK) return I2C_NACK;
-    if (i2c_send_addr(DAC7571_I2C_ADDR, I2C_DIR_TX) != I2C_OK) return I2C_NACK;
-    if (i2c_write_byte(byte_msb) != I2C_OK) return I2C_NACK;
-    if (i2c_write_byte(0x00) != I2C_OK) return I2C_NACK; // Second byte is unused but required
-    i2c_stop();
-    
-    return I2C_OK;
-}
-```
-
-#### Alternative: "Trick" via i2c_write_buffer
-
-If you want to use only high-level functions, you can outsmart the protocol. `i2c_write_buffer(dev_addr, reg_addr, p_buf, len)` sends `reg_addr` as the first data byte, then sends the array.
-
-We can pass Byte 1 (MSB) as the `reg_addr` argument and Byte 2 (LSB) in a 1-byte buffer:
-
-```c
-uint8_t dac7571_set_voltage_via_buffer(uint16_t data_12bit) {
     if (data_12bit > 4095) data_12bit = 4095;
 
-    uint8_t byte_msb = (uint8_t)((data_12bit >> 8) & 0x0F); // Goes in place of register address
-    uint8_t byte_lsb = (uint8_t)(data_12bit & 0xFF);        // Goes in the buffer
+    uint8_t buf[2];
+    buf[0] = (uint8_t)((data_12bit >> 8) & 0x0F); // Normal Mode + 4 MSBs
+    buf[1] = (uint8_t)(data_12bit & 0xFF);        // 8 LSBs
 
-    // Bus sequence will be perfect: START -> ADDR -> MSB -> LSB -> STOP
-    return i2c_write_buffer(DAC7571_I2C_ADDR, byte_msb, &byte_lsb, 1);
+    return i2c_write_raw(DAC7571_I2C_ADDR, buf, 2);
 }
 ```
-
-This saves additional Flash bytes on CH32V003 by reusing the already-written `i2c_write_buffer` code.
 
 #### Practical Example: Sawtooth Wave Generation
 
-Since our driver is optimized for speed with no extra delays, you can cyclically update the DAC in the main loop, generating a high-frequency analog signal.
+Because version 7.0.0 removes unnecessary delays from `i2c_stop()`, the main loop can drive the DAC at maximum bus throughput:
 
 ```c
 #include "i2c.h"
 
 int main(void) {
-    // MCU initialization at 48 MHz (SystemInit)
-    
-    // Enable I2C at maximum speed Fast Mode (400 kHz)
-    // Higher I2C speed = higher signal sampling rate!
-    i2c_init(400000); 
+    SystemCoreClockUpdate();
+    i2c_init(400000); // 400 kHz Fast Mode
     
     uint16_t dac_value = 0;
 
     while(1) {
-        // Send current value to the DAC
         dac7571_set_voltage(dac_value);
         
-        // Increment voltage value
-        dac_value += 4; // Sawtooth step (tuned experimentally)
-        
-        // Reset to 0 at 12-bit max (4095)
+        dac_value += 4;
         if (dac_value >= 4096) {
             dac_value = 0;
         }
-        
-        // No delays needed! The driver is already limited by the 400kHz bus speed.
-        // On an oscilloscope you'll see a clean, smooth analog "sawtooth"
-        // without a single bus hang.
     }
 }
 ```
 
-#### Driver Advantage for DACs (fault tolerance):
-
-When generating a streaming analog signal (as above), the I2C bus is 100% loaded. If a power motor or relay activates nearby, the standard WCH EVT driver will hard-lock.
-
-Our driver in that scenario:
-
-1. Detects the timeout or BERR/ARLO error.
-2. Within microseconds, resets the peripheral and clocks SCL via `__asm volatile("nop")`.
-3. Immediately resumes wave generation. On an oscilloscope, it appears as a barely noticeable micro-glitch, but the system continues stably and never hangs.
+---
 
 ## Bus Recovery Algorithm (Inside)
 
 If an external device hangs mid-word and holds the SDA line LOW, the master hardware cannot generate a START or STOP condition. The driver solves this as follows:
 
 1. `I2C1->CTLR1 &= ~I2C_CTLR1_PE;` fully disables the I2C hardware block.
-2. PC1 and PC2 are switched to general-purpose open-drain output mode (GPIO_CFG_OUT_OD_2M).
+2. PC1 and PC2 are switched to general-purpose open-drain output mode (`GPIO_PC1_PC2_OUT_OD_2M`).
 3. The driver manually generates up to 16 clock pulses on SCL. After each pulse, it checks SDA. As soon as the slave releases SDA to HIGH, the loop terminates early. If Clock Stretching is active on SCL (slave holds SCL low), the master safely waits within `I2C_STRETCH_TIMEOUT`.
 4. A valid STOP sequence is generated via GPIO: SCL LOW → SDA LOW → SCL HIGH → SDA HIGH.
 5. A hard SWRST reset is issued to the I2C1 block.
 6. PC1 and PC2 are reconfigured back to AF_OD alternate function mode.
-7. The register restore function is called: clock control parameters are reloaded, and the hardware ACK control is re-enabled.
+7. The register restore function is called: clock control parameters are reloaded, and hardware ACK control is re-enabled.
+
+---
 
 ## Installation and Integration
 
@@ -368,8 +288,6 @@ lib_deps =
 
 Copy `i2c.h` and `i2c.c` from the `src/` folder into your project.
 
-The clock frequency is automatically determined from `SystemCoreClock` — no manual configuration is needed.
-
 Include the header:
 
 ```c
@@ -382,44 +300,24 @@ Initialize the bus in `main()`:
 i2c_init(400000); // Fast Mode 400 kHz (or 100000 for Standard Mode)
 ```
 
-### Complete Examples
-
-A full working I2C bus scanner example with a ready-made `platformio.ini` is located in
-[`examples/i2c_scanner`](examples/i2c_scanner). A minimal flash-size benchmark lives in
-[`examples/size_benchmark`](examples/size_benchmark).
-
-The repository also ships a **unified root `platformio.ini`** — build any example or benchmark
-directly from the root with a single command:
-
-```sh
-pio run -e scanner        # I2C bus scanner
-pio run -e benchmark_full # flash-size benchmark (Full build)
-pio run -e benchmark_lite # flash-size benchmark (Lite build)
-```
-
 ---
 
 ## Lite Mode (Flash Savings)
 
-For applications with strict Flash budget limits (CH32V003 has only 16 KB), an **Aggressive Lite** mode is provided. It conditionally compiles out portions of the driver — all timeouts remain in place, but on a hardware fault (`BERR`/`ARLO`) or bus stall, functions simply return `I2C_NACK` without attempting hardware bus recovery.
+For applications with strict Flash budget limits, **Aggressive Lite** mode conditionally compiles out portions of the driver:
 
-### Enabling
-
-Add to your `platformio.ini`:
 ```ini
 build_flags = -DI2C_LITE=1
 ```
 
-Or selectively disable only what you don't need:
+Or selectively disable features:
 ```ini
 build_flags =
     -DI2C_DISABLE_BUS_RECOVERY    ; removes i2c_bus_recovery()
-    -DI2C_DISABLE_SCANNER          ; removes i2c_probe_address()
-    -DI2C_DISABLE_BUFFER_API      ; removes i2c_write_buffer()/i2c_read_buffer()
+    -DI2C_DISABLE_SCANNER         ; removes i2c_probe_address()
+    -DI2C_DISABLE_BUFFER_API      ; removes i2c_write_buffer(), raw API, buffer16 API
     -DI2C_DISABLE_ERROR_COUNTER   ; removes consecutive_errors + handle_critical_error()
 ```
-
-`I2C_LITE=1` is equivalent to enabling all four `I2C_DISABLE_*` macros at once. By default (no macro defined or `I2C_LITE=0`), the full fault-tolerant version is built.
 
 ### What Lite keeps
 
@@ -432,50 +330,24 @@ build_flags =
 | `i2c_write_register`, `i2c_read_register` | + | + |
 | `i2c_probe_address` (scanner) | **−** | + |
 | `i2c_write_buffer`, `i2c_read_buffer` | **−** | + |
+| `i2c_write_raw`, `i2c_read_raw` | **−** | + |
+| `i2c_write_buffer16`, `i2c_read_buffer16` | **−** | + |
 | `i2c_bus_recovery` (Clock Recovery) | **−** | + |
-| `consecutive_errors` counter + `handle_critical_error` | **−** | + |
+| `consecutive_errors` counter | **−** | + |
 
-### Lite error handling behavior
+### Measured Flash Footprint (v7.0.0)
 
-All wait loops remain bounded by `I2C_TIMEOUT` — the driver **never hard-locks** (unlike the WCH EVT library). On `BERR`/`ARLO` or timeout, the function:
-1. Clears the error flag.
-2. Attempts `i2c_stop()` to release the bus (where appropriate).
-3. Returns `I2C_NACK`.
-
-If an external device holds SDA LOW after a fault, the bus stays `BUSY` until the next peripheral reset (`i2c_deinit()`/`i2c_init()` or power cycle). Hardware recovery (16 SCL pulses via GPIO) is only available in the full version.
-
-### Measured Flash savings
-
-The results below come from `pio run -d examples/size_benchmark` (or the equivalent
-`pio run -e benchmark_*` environments in the root `platformio.ini`) on a
-`genericCH32V003F4P6` with PlatformIO `ch32v 1.1.0`, the NoneOS SDK, and a
-release build. The minimal benchmark deliberately excludes `printf`, UART, and
-bus scanning while retaining `i2c_init`, `i2c_write_register`,
-`i2c_read_register`, and `i2c_deinit` in the link.
+Measured with `pio run` on `genericCH32V003F4P6` with NoneOS SDK in release mode:
 
 | Profile | Build flags | Flash | RAM | Flash change |
 |---|---|---:|---:|---:|
-| Full | — | 2200 B | 284 B | — |
-| No recovery | `I2C_DISABLE_BUS_RECOVERY` | 1900 B | 284 B | **−300 B** |
-| No error counter | `I2C_DISABLE_ERROR_COUNTER` | 2124 B | 284 B | −76 B |
-| No buffer API | `I2C_DISABLE_BUFFER_API` | 2168 B | 284 B | −32 B |
-| Lite | `I2C_LITE=1` | 1808 B | 284 B | **−392 B** |
+| Full | — | 2268 B | 292 B | — |
+| No recovery | `I2C_DISABLE_BUS_RECOVERY` | 1892 B | 292 B | **−376 B** |
+| No error counter | `I2C_DISABLE_ERROR_COUNTER` | 2208 B | 292 B | −60 B |
+| No buffer API | `I2C_DISABLE_BUFFER_API` | 2216 B | 292 B | −52 B |
+| Lite | `I2C_LITE=1` | 1844 B | 292 B | **−424 B** |
 
-All `I2C_DISABLE_*` flags can be used independently: the no-error-counter
-profile keeps recovery, but performs it immediately after a hardware error
-instead of after two consecutive `BERR`/`ARLO` errors. Disabling GPIO bus recovery provides the largest reduction. The benchmark does
-not call the buffer API, so linker garbage collection already removes nearly all
-of it from the Full build. An application that calls `i2c_read_buffer()` or
-`i2c_write_buffer()` will save more with `I2C_DISABLE_BUFFER_API`, but those APIs
-will no longer be available.
-
-For register-I/O-only applications (sensors, EEPROM, DACs), Lite mode frees
-about 0.5 KiB of Flash. Re-run the measurement with your SDK/compiler version
-from `examples/size_benchmark`.
-
-### Compatibility
-
-The `examples/i2c_scanner` example requires `i2c_probe_address` and **does not compile** in Lite mode — this is intentional: the user gets a clear compile/link error (`undefined reference to 'i2c_probe_address'`) rather than a silently degraded API.
+---
 
 ## License
 
