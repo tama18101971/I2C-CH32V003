@@ -126,7 +126,7 @@ jobs:
       - name: Create size report
         shell: bash
         run: |
-          cat > size-report.md << EOF
+          cat > "size-report-${{ matrix.environment }}.md" << EOF
           | Environment | Flash | Flash % | RAM | RAM % |
           |---|---:|---:|---:|---:|
           | ${{ steps.size.outputs.environment }} | ${{ steps.size.outputs.flash_used }} / ${{ steps.size.outputs.flash_total }} bytes | ${{ steps.size.outputs.flash_percent }} | ${{ steps.size.outputs.ram_used }} / ${{ steps.size.outputs.ram_total }} bytes | ${{ steps.size.outputs.ram_percent }} |
@@ -136,7 +136,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: size-report-${{ matrix.environment }}
-          path: size-report.md
+          path: size-report-${{ matrix.environment }}.md
           if-no-files-found: error
 
 
