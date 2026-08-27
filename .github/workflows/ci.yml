@@ -72,21 +72,48 @@ jobs:
 
           echo "$SIZE_OUTPUT"
 
-          RAM_LINE=$(echo "$SIZE_OUTPUT" | grep "^RAM:")
-          FLASH_LINE=$(echo "$SIZE_OUTPUT" | grep "^Flash:")
+          RAM_LINE=$(echo "$SIZE_OUTPUT" | grep "^RAM:" || true)
+          FLASH_LINE=$(echo "$SIZE_OUTPUT" | grep "^Flash:" || true)
 
-          if [ -z "$RAM_LINE" ] || [ -z "$FLASH_LINE" ]; then
-            echo "ERROR: failed to parse RAM/Flash lines from pio size output"
+          if [ -n "$RAM_LINE" ] && [ -n "$FLASH_LINE" ]; then
+            RAM_USED=$(echo "$RAM_LINE" | sed -n 's/.*(\([0-9]*\) bytes.*/\1/p')
+            RAM_TOTAL=$(echo "$RAM_LINE" | sed -n 's/.*from \([0-9]*\) bytes).*/\1/p')
+            FLASH_USED=$(echo "$FLASH_LINE" | sed -n 's/.*(\([0-9]*\) bytes.*/\1/p')
+            FLASH_TOTAL=$(echo "$FLASH_LINE" | sed -n 's/.*from \([0-9]*\) bytes).*/\1/p')
+          else
+            SIZE_ROW=$(echo "$SIZE_OUTPUT" | grep -E "^[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9a-f]+[[:space:]]+.*firmware\.elf[[:space:]]*$" || true)
+
+            if [ -z "$SIZE_ROW" ]; then
+              echo "ERROR: failed to parse RAM/Flash lines from pio size output"
+              exit 1
+            fi
+
+            TEXT_BYTES=$(echo "$SIZE_ROW" | awk '{print $1}')
+            DATA_BYTES=$(echo "$SIZE_ROW" | awk '{print $2}')
+            BSS_BYTES=$(echo "$SIZE_ROW" | awk '{print $3}')
+
+            HW_LINE=$(echo "$SIZE_OUTPUT" | grep "^HARDWARE:" || true)
+            RAM_KB=$(echo "$HW_LINE" | sed -n 's/.* \([0-9]*\)KB RAM.*/\1/p')
+            FLASH_KB=$(echo "$HW_LINE" | sed -n 's/.* \([0-9]*\)KB Flash.*/\1/p')
+
+            if [ -z "$RAM_KB" ] || [ -z "$FLASH_KB" ]; then
+              echo "ERROR: failed to parse RAM/Flash totals from HARDWARE line"
+              exit 1
+            fi
+
+            FLASH_USED=$((TEXT_BYTES + DATA_BYTES))
+            RAM_USED=$((DATA_BYTES + BSS_BYTES))
+            FLASH_TOTAL=$((FLASH_KB * 1024))
+            RAM_TOTAL=$((RAM_KB * 1024))
+          fi
+
+          if [ -z "$RAM_USED" ] || [ -z "$RAM_TOTAL" ] || [ -z "$FLASH_USED" ] || [ -z "$FLASH_TOTAL" ]; then
+            echo "ERROR: failed to parse RAM/Flash usage from pio size output"
             exit 1
           fi
 
-          RAM_PERCENT=$(echo "$RAM_LINE" | sed -n 's/.*RAM: *\([0-9.]*%\).*/\1/p')
-          RAM_USED=$(echo "$RAM_LINE" | sed -n 's/.*(\([0-9]*\) bytes.*/\1/p')
-          RAM_TOTAL=$(echo "$RAM_LINE" | sed -n 's/.*from \([0-9]*\) bytes).*/\1/p')
-
-          FLASH_PERCENT=$(echo "$FLASH_LINE" | sed -n 's/.*Flash: *\([0-9.]*%\).*/\1/p')
-          FLASH_USED=$(echo "$FLASH_LINE" | sed -n 's/.*(\([0-9]*\) bytes.*/\1/p')
-          FLASH_TOTAL=$(echo "$FLASH_LINE" | sed -n 's/.*from \([0-9]*\) bytes).*/\1/p')
+          RAM_PERCENT=$(awk "BEGIN{printf \"%.1f%%\", $RAM_USED * 100 / $RAM_TOTAL}")
+          FLASH_PERCENT=$(awk "BEGIN{printf \"%.1f%%\", $FLASH_USED * 100 / $FLASH_TOTAL}")
 
           echo "environment=${{ matrix.environment }}" >> "$GITHUB_OUTPUT"
           echo "ram_percent=$RAM_PERCENT" >> "$GITHUB_OUTPUT"
