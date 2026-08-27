@@ -2,35 +2,144 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
+
   pull_request:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
+
   workflow_dispatch:
 
 jobs:
   build:
+    name: Build - ${{ matrix.environment }}
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        environment:
+          - scanner
+          - benchmark_full
+          - benchmark_no_recovery
+          - benchmark_no_error_counter
+          - benchmark_no_buffer
+          - benchmark_lite
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: platformio-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            platformio-${{ runner.os }}-
 
       - name: Install PlatformIO
         run: |
-          python -m pip install --upgrade pip
+          pip install --upgrade pip
           pip install --upgrade platformio
 
-      - name: Cache PlatformIO packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.platformio
-          key: ${{ runner.os }}-platformio-${{ hashFiles('**/platformio.ini') }}
-          restore-keys: |
-            ${{ runner.os }}-platformio-
+      - name: Build
+        run: pio run -e ${{ matrix.environment }}
 
-      - name: Build all environments
-        run: pio run
+      - name: Calculate memory usage
+        id: size
+        shell: bash
+        run: |
+          ELF_FILE=".pio/build/${{ matrix.environment }}/firmware.elf"
+
+          if [ ! -f "$ELF_FILE" ]; then
+            echo "ERROR: ELF file not found: $ELF_FILE"
+            exit 1
+          fi
+
+          SIZE_OUTPUT=$(pio run -e ${{ matrix.environment }} --target size)
+
+          echo "$SIZE_OUTPUT"
+
+          RAM_LINE=$(echo "$SIZE_OUTPUT" | grep "^RAM:")
+          FLASH_LINE=$(echo "$SIZE_OUTPUT" | grep "^Flash:")
+
+          if [ -z "$RAM_LINE" ] || [ -z "$FLASH_LINE" ]; then
+            echo "ERROR: failed to parse RAM/Flash lines from pio size output"
+            exit 1
+          fi
+
+          RAM_PERCENT=$(echo "$RAM_LINE" | sed -n 's/.*RAM: *\([0-9.]*%\).*/\1/p')
+          RAM_USED=$(echo "$RAM_LINE" | sed -n 's/.*(\([0-9]*\) bytes.*/\1/p')
+          RAM_TOTAL=$(echo "$RAM_LINE" | sed -n 's/.*from \([0-9]*\) bytes).*/\1/p')
+
+          FLASH_PERCENT=$(echo "$FLASH_LINE" | sed -n 's/.*Flash: *\([0-9.]*%\).*/\1/p')
+          FLASH_USED=$(echo "$FLASH_LINE" | sed -n 's/.*(\([0-9]*\) bytes.*/\1/p')
+          FLASH_TOTAL=$(echo "$FLASH_LINE" | sed -n 's/.*from \([0-9]*\) bytes).*/\1/p')
+
+          echo "environment=${{ matrix.environment }}" >> "$GITHUB_OUTPUT"
+          echo "ram_percent=$RAM_PERCENT" >> "$GITHUB_OUTPUT"
+          echo "ram_used=$RAM_USED" >> "$GITHUB_OUTPUT"
+          echo "ram_total=$RAM_TOTAL" >> "$GITHUB_OUTPUT"
+          echo "flash_percent=$FLASH_PERCENT" >> "$GITHUB_OUTPUT"
+          echo "flash_used=$FLASH_USED" >> "$GITHUB_OUTPUT"
+          echo "flash_total=$FLASH_TOTAL" >> "$GITHUB_OUTPUT"
+
+      - name: Create size report
+        shell: bash
+        run: |
+          cat > size-report.md << EOF
+          | Environment | Flash | Flash % | RAM | RAM % |
+          |---|---:|---:|---:|---:|
+          | ${{ steps.size.outputs.environment }} | ${{ steps.size.outputs.flash_used }} / ${{ steps.size.outputs.flash_total }} bytes | ${{ steps.size.outputs.flash_percent }} | ${{ steps.size.outputs.ram_used }} / ${{ steps.size.outputs.ram_total }} bytes | ${{ steps.size.outputs.ram_percent }} |
+          EOF
+
+      - name: Upload size report
+        uses: actions/upload-artifact@v4
+        with:
+          name: size-report-${{ matrix.environment }}
+          path: size-report.md
+          if-no-files-found: error
+
+
+  summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: build
+    if: always()
+
+    steps:
+      - name: Download size reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: size-report-*
+          merge-multiple: true
+          path: reports
+
+      - name: Create GitHub Actions Summary
+        shell: bash
+        run: |
+          echo "# I2C-CH32V003 Build Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "| Environment | Flash | Flash % | RAM | RAM % |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---:|---:|---:|---:|" >> "$GITHUB_STEP_SUMMARY"
+
+          if compgen -G "reports/*.md" > /dev/null; then
+            for file in reports/*.md; do
+              tail -n +3 "$file" >> "$GITHUB_STEP_SUMMARY"
+            done
+          else
+            echo "| No successful build reports available | - | - | - | - |" >> "$GITHUB_STEP_SUMMARY"
+          fi
