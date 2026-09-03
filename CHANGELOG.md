@@ -2,6 +2,128 @@
 
 All notable changes to this project will be documented in this file.
 
+## [7.1.0] - 2026-09-03
+
+### 🛡️ Robustness & Safety
+- **Single bus recovery per fault** — the flag-wait state machine now processes
+  a hardware error *before* issuing `i2c_stop()`. Previously a `BERR`/`ARLO` was
+  observed twice (once inside `i2c_stop()` → `i2c_wait_busy_clear()`, once in the
+  caller), double-counting `consecutive_errors` and doubling worst-case fault
+  latency to `2 × I2C_TIMEOUT_MS`. Timeout paths now program `STOP` directly
+  without a second full-length `BUSY` wait. Worst-case fault latency is halved.
+- **Optional critical sections (`I2C_ATOMIC_CRITICAL`, default off)** — the
+  hardware requires the `ADDR`-clear → `STOP`/`ACK=0` sequences (RM events
+  EV6_3) to complete before the current byte finishes on the wire. With
+  `-DI2C_ATOMIC_CRITICAL=1` those windows run with interrupts disabled,
+  preventing lost/duplicated bytes when an ISR is longer than one byte time
+  (≈90 µs at 100 kHz, ≈23 µs at 400 kHz). Cost when enabled: 16 B (profile B, LTO).
+- **Clock-scaled clock-stretching timeout** — new `I2C_STRETCH_TIMEOUT_US`
+  (default 1000 µs) is scaled by `PCLK1` in `i2c_init()`. The previous fixed
+  loop counter (`I2C_STRETCH_TIMEOUT=1000`) produced ≈135 µs at 48 MHz versus
+  ≈3.2 ms at 2 MHz, so slow slaves could be overridden by recovery clocks at
+  high core frequencies.
+- **Recovery fails safe** — if register re-configuration inside
+  `i2c_bus_recovery()` returns an error (core clock changed at runtime), the
+  peripheral is left disabled instead of being enabled with invalid
+  `CTLR2`/`CKCFGR` (`FREQ = 0` is not a valid value).
+- **`i2c_deinit()` waits for a free bus** before dropping `PE`, so a slave is
+  not left mid-transaction when the peripheral is switched off.
+- **7-bit address masking** — `i2c_send_addr()` now applies `addr & 0x7F`,
+  mirroring the existing `direction & 1` masking. Previously `addr >= 0x80`
+  silently corrupted the transmitted byte.
+
+### 🎁 New API
+- **`i2c_get_last_star1()`** — returns the `STAR1` snapshot captured at the
+  moment the last error was detected, *before* the driver clears
+  `AF`/`BERR`/`ARLO`. Reading `I2C1->STAR1` after a failed call yields a clean
+  register; the snapshot preserves the real cause. `i2c_probe_address()` now
+  reports this snapshot through `p_star1` as well (previously it reported a
+  register that had already been cleared, making the diagnostics unusable).
+  Compiled out by `-DI2C_DISABLE_LAST_ERROR` / `I2C_LITE=1`.
+
+### 🐛 Fixed
+- **Unreachable bus speed is an error** — if the computed `CCR` divisor does not
+  fit into 12 bits, `i2c_init()` returns `I2C_ERR_CLK` instead of silently
+  clamping and running the bus at a different frequency than requested.
+- **`i2c_deinit()` no longer disables `PE` mid-transaction** — it waits for the
+  bus to become free first (bounded by the regular timeout and recovery).
+- **`stddef.h` is included by `i2c.h`** — the header documents `NULL` for the
+  optional `i2c_probe_address()` outputs but did not actually provide it;
+  compiling `i2c_probe_address(0x50, NULL, NULL)` in a TU that includes only
+  `i2c.h` failed. Found by the new host test suite.
+- **`reg &= ~BIT` narrowing warnings** — status-register bit clears use explicit
+  `uint16_t` casts; the driver now compiles warning-free under
+  `-Wall -Wextra`.
+
+### ⚡ Performance & Size
+- **LTO enabled in all build environments** (`board_build.use_lto = yes`) —
+  measured −212 B (Full) to −672 B (full-API build). On the `ch32v` platform
+  LTO only works via `board_build.use_lto`; `-flto` in `build_flags` does not
+  reach the linker.
+- **Single STAR1 read per wait iteration** — `i2c_wait_star1_flag()` previously
+  performed two MMIO reads per poll loop iteration; now one (−16 B, ~⅓ less
+  APB traffic in the hottest loop).
+- **Static driver state moved to `.bss`** — `i2c_speed` / `i2c_timeout_loops`
+  no longer carry `.data` initializers (−12 B).
+- **Deduplicated 16-bit address phase** — `i2c_write_buffer16()` and
+  `i2c_read_buffer16()` share `i2c_start_reg16_write()`.
+- **`I2C_FIXED_PCLK_HZ`** — new opt-in macro compiles the driver against a
+  compile-time `PCLK1`: all divisors fold to constants and the
+  `SystemCoreClock` range check is skipped (−56 B; `I2C_ERR_CLK` for the clock
+  itself is then not returned).
+- **`I2C_ERR_CLK` instead of silent clamp** for unreachable speeds (see above).
+
+### 🏗️ CI & Quality
+- **Host unit tests** — 36 state-machine tests executed against a software
+  model of the peripheral and slave (`test/`), 10 build configurations, no
+  hardware required: `pwsh test/run_tests.ps1`. The model reacts to individual
+  register accesses, so it enforces real hardware semantics (`ADDR` cleared by
+  `STAR1`+`STAR2` reads, `RXNE`/`BTF` by `DATAR` reads, `ACK`/`NACK` sampled
+  from `CTLR1` when each byte arrives). Verified: canonical read sequences for
+  `len` = 1/2/3/8 per RM0008 §26.3.3, error/timeout/recovery paths, `ACK=1` /
+  `POS=0` invariants on all failure paths, critical-section depth, `len == 0`
+  semantics.
+- **CI memory arithmetic fixed** — Flash/RAM are now computed by summing ELF
+  sections instead of GNU `size` columns. The previous fallback under-counted
+  Flash by 32 B (the `ALLOC`-only `.vector` section) and RAM by 256 B (the
+  `.stack` section), reporting 36 B of RAM where 292 B are actually used. A
+  consistency check now asserts the section sum equals the `firmware.bin` size.
+- **New size profiles** — `allapi_full` / `allapi_no_buffer` / `allapi_no_scanner`
+  / `allapi_lite` link *every* public function, so `--gc-sections` cannot hide
+  their cost. The old benchmark referenced only the register API, which made
+  `I2C_DISABLE_BUFFER_API` look free even though it saves 336 B in an
+  application that actually uses the buffer API. A `nolto_full` / `nolto_lite`
+  reference pair documents the LTO delta.
+- **Unit-test job added to CI** — the full 10-configuration test matrix runs on
+  every push/PR alongside the build matrix.
+
+### 📚 Documentation
+- READMEs document the usage contracts explicitly: single execution context
+  (not ISR-safe), interrupt-length caveat with `I2C_ATOMIC_CRITICAL`, default
+  I2C1 pin mapping without AFIO remap, no NULL-checking of buffers, `len == 0`
+  semantics, and `i2c_init()` call order.
+- New build-configuration table covering all `I2C_*` macros, including the new
+  `I2C_STRETCH_TIMEOUT_US`, `I2C_MAX_ERROR_COUNT`, `I2C_ATOMIC_CRITICAL`,
+  `I2C_FIXED_PCLK_HZ` and `I2C_DISABLE_LAST_ERROR`.
+- `I2C_TIMEOUT` and `I2C_STRETCH_TIMEOUT` marked deprecated (unused since 7.0.0;
+  removal scheduled for 8.0.0).
+- `examples/size_benchmark/README.md` rewritten for the two-profile methodology,
+  including the correct way to sum ELF sections.
+
+### 📦 Footprint (genericCH32V003F4P6, LTO enabled)
+
+| Profile | 7.0.1 | 7.1.0 | Delta |
+|---|---:|---:|---:|
+| Full, register API (profile A) | 2268 B | 2172 B | **−96 B** |
+| Lite, register API (profile A) | 1844 B | 1704 B | −140 B |
+| Full, all API referenced (profile B) | 3144 B¹ | 2596 B | −548 B |
+| Lite, all API referenced (profile B) | 1876 B¹ | 1724 B | −152 B |
+
+¹ measured with the new `allapi` methodology; there was no equivalent profile in 7.0.1.
+RAM is unchanged at 292–296 B. The new features (error snapshot, clock-scaled
+stretch timeout, `deinit` bus wait, critical-section plumbing) add ~116 B without
+LTO; LTO more than compensates.
+
 ## [7.0.1] - 2026-08-26
 
 ### 🐛 Fixed

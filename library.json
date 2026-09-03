@@ -1,8 +1,8 @@
 {
   "name": "I2C-CH32V003",
-  "version": "7.0.1",
+  "version": "7.1.0",
   "description": "Fault-tolerant I2C1 driver for CH32V003 (RISC-V) with bus recovery and timeout protection",
-  "keywords": "i2c, ch32v003, risc-v, wch, driver",
+  "keywords": "i2c, ch32v003, risc-v, wch, driver, eeprom, oled, sensor",
   "authors": [
     {
       "name": "Dmitriy Gorin"
@@ -21,6 +21,16 @@
     "examples/*/src/*.c",
     "examples/*/*.c"
   ],
+  "export": {
+    "exclude": [
+      ".github",
+      ".kilo",
+      ".serena",
+      ".pio",
+      "test/build",
+      "examples/i2c_scanner/.gitignore"
+    ]
+  },
   "build": {
     "srcDir": "src"
   }

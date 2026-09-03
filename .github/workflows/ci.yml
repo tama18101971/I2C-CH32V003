@@ -14,6 +14,45 @@ on:
   workflow_dispatch:
 
 jobs:
+  unit-tests:
+    name: Host unit tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - ""
+          - "-DI2C_ATOMIC_CRITICAL=1"
+          - "-DI2C_LEGACY_STATUS=1"
+          - "-DI2C_TIMEOUT_MS=5"
+          - "-DI2C_DISABLE_ERROR_COUNTER"
+          - "-DI2C_DISABLE_BUS_RECOVERY"
+          - "-DI2C_DISABLE_BUFFER_API"
+          - "-DI2C_DISABLE_SCANNER"
+          - "-DI2C_LITE=1"
+          - "-DI2C_LITE=1 -DI2C_ATOMIC_CRITICAL=1"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build and run driver state-machine tests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p test/build
+          g++ ${{ matrix.config }} \
+            -std=c++11 -O1 -g -Wall -Wextra -Werror \
+            -Itest/mock -Isrc -Itest \
+            -x c++ src/i2c.c \
+            -x c++ test/i2c_mock.cpp \
+            -x c++ test/test_i2c.cpp \
+            -o test/build/test_i2c
+
+          ./test/build/test_i2c
+
   build:
     name: Build - ${{ matrix.environment }}
     runs-on: ubuntu-latest
@@ -28,6 +67,12 @@ jobs:
           - benchmark_no_error_counter
           - benchmark_no_buffer
           - benchmark_lite
+          - allapi_full
+          - allapi_no_buffer
+          - allapi_no_scanner
+          - allapi_lite
+          - nolto_full
+          - nolto_lite
 
     steps:
       - name: Checkout repository
@@ -61,55 +106,49 @@ jobs:
         id: size
         shell: bash
         run: |
-          ELF_FILE=".pio/build/${{ matrix.environment }}/firmware.elf"
+          set -euo pipefail
 
+          ELF_FILE=".pio/build/${{ matrix.environment }}/firmware.elf"
           if [ ! -f "$ELF_FILE" ]; then
             echo "ERROR: ELF file not found: $ELF_FILE"
             exit 1
           fi
 
-          SIZE_OUTPUT=$(pio run -e ${{ matrix.environment }} --target size)
-
-          echo "$SIZE_OUTPUT"
-
-          RAM_LINE=$(echo "$SIZE_OUTPUT" | grep "^RAM:" || true)
-          FLASH_LINE=$(echo "$SIZE_OUTPUT" | grep "^Flash:" || true)
-
-          if [ -n "$RAM_LINE" ] && [ -n "$FLASH_LINE" ]; then
-            RAM_USED=$(echo "$RAM_LINE" | sed -n 's/.*(\([0-9]*\) bytes.*/\1/p')
-            RAM_TOTAL=$(echo "$RAM_LINE" | sed -n 's/.*from \([0-9]*\) bytes).*/\1/p')
-            FLASH_USED=$(echo "$FLASH_LINE" | sed -n 's/.*(\([0-9]*\) bytes.*/\1/p')
-            FLASH_TOTAL=$(echo "$FLASH_LINE" | sed -n 's/.*from \([0-9]*\) bytes).*/\1/p')
-          else
-            SIZE_ROW=$(echo "$SIZE_OUTPUT" | grep -E "^[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9a-f]+[[:space:]]+.*firmware\.elf[[:space:]]*$" || true)
-
-            if [ -z "$SIZE_ROW" ]; then
-              echo "ERROR: failed to parse RAM/Flash lines from pio size output"
-              exit 1
-            fi
-
-            TEXT_BYTES=$(echo "$SIZE_ROW" | awk '{print $1}')
-            DATA_BYTES=$(echo "$SIZE_ROW" | awk '{print $2}')
-            BSS_BYTES=$(echo "$SIZE_ROW" | awk '{print $3}')
-
-            HW_LINE=$(echo "$SIZE_OUTPUT" | grep "^HARDWARE:" || true)
-            RAM_KB=$(echo "$HW_LINE" | sed -n 's/.* \([0-9]*\)KB RAM.*/\1/p')
-            FLASH_KB=$(echo "$HW_LINE" | sed -n 's/.* \([0-9]*\)KB Flash.*/\1/p')
-
-            if [ -z "$RAM_KB" ] || [ -z "$FLASH_KB" ]; then
-              echo "ERROR: failed to parse RAM/Flash totals from HARDWARE line"
-              exit 1
-            fi
-
-            FLASH_USED=$((TEXT_BYTES + DATA_BYTES))
-            RAM_USED=$((DATA_BYTES + BSS_BYTES))
-            FLASH_TOTAL=$((FLASH_KB * 1024))
-            RAM_TOTAL=$((RAM_KB * 1024))
+          SIZE_TOOL=$(find "$HOME/.platformio/packages/toolchain-riscv/bin" -name '*-size' | head -n 1)
+          if [ -z "$SIZE_TOOL" ]; then
+            echo "ERROR: riscv size tool not found"
+            exit 1
           fi
 
-          if [ -z "$RAM_USED" ] || [ -z "$RAM_TOTAL" ] || [ -z "$FLASH_USED" ] || [ -z "$FLASH_TOTAL" ]; then
-            echo "ERROR: failed to parse RAM/Flash usage from pio size output"
+          # Размер считается суммой секций, а не колонками text/data из вывода
+          # GNU size: секция .vector имеет атрибут ALLOC без LOAD (не попадает в
+          # text, но присутствует в firmware.bin), а .stack размещён в RAM и не
+          # входит в bss. Сумма по секциям совпадает и с размером .bin, и с
+          # отчётом PlatformIO.
+          SECTIONS=$("$SIZE_TOOL" -A "$ELF_FILE")
+          echo "$SECTIONS"
+
+          FLASH_USED=$(awk '$1 ~ /^\.(init|vector|text|fini|data|highcode)$/ { s += $2 } END { print s+0 }' <<< "$SECTIONS")
+          RAM_USED=$(awk   '$1 ~ /^\.(data|bss|stack)$/                      { s += $2 } END { print s+0 }' <<< "$SECTIONS")
+
+          # Ёмкость памяти берётся из манифеста платы, а не парсингом текста
+          BOARD=$(awk -F'=' '/^[[:space:]]*board[[:space:]]*=/ { gsub(/[[:space:]]/, "", $2); print $2; exit }' platformio.ini)
+          FLASH_TOTAL=$(pio boards "$BOARD" --json-output | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["rom"])')
+          RAM_TOTAL=$(pio boards "$BOARD" --json-output | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["ram"])')
+
+          if [ "$FLASH_USED" -eq 0 ] || [ "$RAM_USED" -eq 0 ] || [ -z "$FLASH_TOTAL" ] || [ -z "$RAM_TOTAL" ]; then
+            echo "ERROR: failed to determine memory usage"
             exit 1
+          fi
+
+          # Контроль согласованности: сумма секций обязана совпасть с firmware.bin
+          BIN_FILE=".pio/build/${{ matrix.environment }}/firmware.bin"
+          if [ -f "$BIN_FILE" ]; then
+            BIN_SIZE=$(stat -c%s "$BIN_FILE")
+            if [ "$BIN_SIZE" != "$FLASH_USED" ]; then
+              echo "ERROR: section sum ($FLASH_USED) != firmware.bin size ($BIN_SIZE)"
+              exit 1
+            fi
           fi
 
           RAM_PERCENT=$(awk "BEGIN{printf \"%.1f%%\", $RAM_USED * 100 / $RAM_TOTAL}")
@@ -138,7 +177,6 @@ jobs:
           name: size-report-${{ matrix.environment }}
           path: size-report-${{ matrix.environment }}.md
           if-no-files-found: error
-
 
   summary:
     name: Build Summary

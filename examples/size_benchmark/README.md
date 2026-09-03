@@ -1,23 +1,60 @@
-# I2C size benchmark
+# I2C size benchmarks
 
-This PlatformIO project measures a minimal firmware that links `i2c_init()`,
-`i2c_write_register()`, `i2c_read_register()`, and `i2c_deinit()`.
+Два профиля измерения Flash для одной и той же библиотеки:
 
-It intentionally excludes `printf`, UART initialization, and I2C bus scanning.
-Run all profiles from the repository root:
+| main-файл | Что измеряет |
+|---|---|
+| `src/main.c` | типовое сенсорное приложение: `i2c_init()`, `i2c_write_register()`, `i2c_read_register()`, `i2c_deinit()` |
+| `src/main_allapi.c` | ссылается на **каждую** публичную функцию, поэтому `--gc-sections` не может выбросить ни одну из них |
+
+Оба профиля намеренно не содержат `printf`, инициализации UART и сканирования шины.
+Транзакции не выполняются: обращения к API закрыты `volatile`-гейтом, равным нулю,
+поэтому устройство на шине для сборки и прошивки не требуется, но линкер обязан
+сохранить весь задействованный код.
+
+Зачем два профиля: при ссылке только на регистровое API линкер выбрасывает
+приёмный движок (`i2c_read_bytes_rx`), buffer/raw/buffer16-функции и сканер.
+Из-за этого выгода от `I2C_DISABLE_BUFFER_API` выглядит равной нулю, хотя в
+приложении, реально использующем буферное API, она составляет несколько сотен байт.
+
+## Запуск
+
+Все окружения объявлены в корневом `platformio.ini`; запускать из корня репозитория:
 
 ```sh
-pio run -d examples/size_benchmark
+# типовое приложение
+pio run -e benchmark_full -e benchmark_no_recovery -e benchmark_no_error_counter \
+        -e benchmark_no_buffer -e benchmark_lite
+
+# все публичные функции задействованы
+pio run -e allapi_full -e allapi_no_buffer -e allapi_no_scanner -e allapi_lite
+
+# референс без LTO для сравнения
+pio run -e nolto_full -e nolto_lite
 ```
 
-The resulting size is reported by PlatformIO for each environment:
+Профили:
 
-- `full` — all features enabled;
-- `no_recovery` — `I2C_DISABLE_BUS_RECOVERY`;
-- `no_error_counter` — `I2C_DISABLE_ERROR_COUNTER` (recovery stays enabled);
-- `no_buffer` — `I2C_DISABLE_BUFFER_API`;
-- `lite` — `I2C_LITE=1`.
+- `benchmark_full` / `allapi_full` — все возможности включены;
+- `benchmark_no_recovery` — `I2C_DISABLE_BUS_RECOVERY`;
+- `benchmark_no_error_counter` — `I2C_DISABLE_ERROR_COUNTER` (восстановление остаётся);
+- `benchmark_no_buffer` / `allapi_no_buffer` — `I2C_DISABLE_BUFFER_API`;
+- `allapi_no_scanner` — `I2C_DISABLE_SCANNER`;
+- `benchmark_lite` / `allapi_lite` — `I2C_LITE=1`;
+- `nolto_full` / `nolto_lite` — те же сборки с `board_build.use_lto = no`.
 
-`main.c` reads a zero-initialized `volatile` guard before invoking the register
-functions. Therefore the linker retains those functions for size measurement,
-while a normal run does not issue an I2C transaction or need a connected device.
+## Как считать размер
+
+Отчёт PlatformIO (`Flash: ... used`) корректен. При ручном подсчёте суммируйте
+секции, а не колонки `text`/`data` из GNU `size`: секция `.vector` имеет атрибут
+`ALLOC` без `LOAD` (в `text` не попадает, но в `firmware.bin` присутствует), а
+`.stack` размещена в RAM и не входит в `bss`.
+
+```sh
+riscv-none-elf-size -A .pio/build/benchmark_full/firmware.elf
+# Flash = .init + .vector + .text + .fini + .data (+ .highcode)
+# RAM   = .data + .bss + .stack
+```
+
+Сумма секций Flash обязана совпадать с размером `firmware.bin`; в CI это
+проверяется автоматически.
