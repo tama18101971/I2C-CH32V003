@@ -1,0 +1,46 @@
+# clangd configuration for the host unit tests.
+#
+# The tests build the unmodified driver with a host C++ compiler, replacing the
+# SDK header ch32v00x.h with the peripheral model in test/mock/ch32v00x.h.
+# Include order therefore matters: mock first, so that the real WCH SDK header
+# (injected by compile_commands.json for src/i2c.c) is not picked up here.
+#
+# Flags mirror test/run_tests.ps1 and the unit-tests job in .github/workflows/ci.yml.
+#
+# Remaining per-machine step: clangd defaults to an MSVC/host target and does not
+# know where this machine's C++ standard library lives, so <cstdio> stays
+# unresolved until the host compiler is queried:
+#
+#     clangd --query-driver=<path to g++ or clang++>
+#
+# The VS Code clangd extension does this automatically; for a manual or MCP
+# launch, pass the same flag. The path is machine-specific and therefore
+# deliberately NOT committed -- see .gitignore.
+
+CompileFlags:
+  Add:
+    # -x c++ because clangd treats the extensionless-purpose headers here as C
+    # (".h" defaults to C, which rejects -std=gnu++11). run_tests.ps1 passes the
+    # same flag for the same reason. "-x" and its value must be separate
+    # arguments: as one token clang reads "x c++" as the language name.
+    - -x
+    - c++
+    - -std=gnu++11
+    - -Itest/mock
+    - -Itest
+  Remove:
+    # These tests run on the host, not on the microcontroller. Everything below
+    # is an embedded-target flag that reaches this directory either from the root
+    # .clangd or through clangd's closest-entry fallback against the root
+    # compilation database (these files are not in it). Dropping them lets
+    # clangd search the host standard library (<cstdio> and friends) instead of
+    # a RISC-V one.
+    - --target=riscv32-unknown-elf
+    - -mabi=ilp32e
+    - -msave-restore
+    - -msmall-data-limit=0
+    - -G
+
+Index:
+  Exclude:
+    - test/build/

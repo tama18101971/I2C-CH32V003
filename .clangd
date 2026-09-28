@@ -1,0 +1,57 @@
+# clangd configuration for I2C-CH32V003 (WCH CH32V003, RV32EC, PlatformIO).
+#
+# This file is shared through git and MUST stay machine-independent: no absolute
+# paths and no reference to the PlatformIO user directory. The WCH SDK include
+# paths, the toolchain, and the arch/ABI flags are machine- and build-specific,
+# so they are supplied per checkout by a generated compilation database:
+#
+#     pio run -e scanner -t compiledb
+#
+# Regenerate it whenever platformio.ini changes. compile_commands.json is
+# intentionally gitignored for that reason.
+#
+# The database stays the single source of truth for -std/-march/-mabi, so this
+# file does not repeat them. The one cross flag added below (--target) is
+# explicitly removed again in test/.clangd, which builds for the host.
+#
+# Test sources do not belong here either: they substitute the SDK header with
+# test/mock/ch32v00x.h, which must not shadow the real one for src/.
+# Their flags live in test/.clangd.
+
+CompileFlags:
+  CompilationDatabase: .
+  Add:
+    # The compile commands name riscv-wch-elf-gcc but carry no -target, so
+    # clangd falls back to the host triple and then rejects the RISC-V flags
+    # from the database ("Unsupported option '-mabi=' for target
+    # 'x86_64-pc-windows-msvc'"). Pin the target so the driver is parsed as RV32.
+    - --target=riscv32-unknown-elf
+    # Board and clock selection macros (CH32V003F4P6, 48 MHz HSI + PLL).
+    # Arch- and ABI-independent, so they are safe to share and they keep
+    # src/i2c.c meaningful before compile_commands.json is generated.
+    - -DCH32V003F4
+    - -DCH32V00X
+    - -DCH32V00x
+    - -DCH32V003
+    - -DSYSCLK_FREQ_48MHz_HSI=48000000
+    - -DSYSCLK_FREQ_48MHZ_HSI=48000000
+  Remove:
+    # WCH's real toolchain builds rv32ecxw; upstream clang rejects the
+    # non-standard "xw" extension ("Invalid arch name 'rv32ecxw'"). The
+    # database is not committed, so this removal is the only way to keep the
+    # embedded target analysable on every developer machine.
+    - -march=rv32ecxw
+    # Link-time optimisation is a link-stage flag; it only confuses the driver.
+    - -flto
+
+Index:
+  Exclude:
+    # Build output and dependency trees
+    - .pio/
+    # Agent Manager worktrees: a full copy of this repository nested inside the
+    # project root. Indexing it produces duplicate definitions of every i2c_*
+    # symbol and duplicate diagnostics.
+    - .kilo/
+    # Caches
+    - .serena/cache/
+    - test/build/
