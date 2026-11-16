@@ -1,0 +1,27 @@
+[
+  {
+    "mutation": "ready_before_error",
+    "detected": true,
+    "test_exit": 1
+  },
+  {
+    "mutation": "ignore_probe_stop",
+    "detected": true,
+    "test_exit": 1
+  },
+  {
+    "mutation": "floor_ccr",
+    "detected": true,
+    "test_exit": 1
+  },
+  {
+    "mutation": "missing_pos",
+    "detected": true,
+    "test_exit": 1
+  },
+  {
+    "mutation": "enable_disabled_irq",
+    "detected": true,
+    "test_exit": 1
+  }
+]

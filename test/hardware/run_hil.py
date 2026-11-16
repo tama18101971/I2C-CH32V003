@@ -20,10 +20,11 @@ p = argparse.ArgumentParser()
 p.add_argument("--env", default="hardware_apds")
 p.add_argument("--port", default="COM6")
 p.add_argument("--seconds", type=float, default=90)
+p.add_argument("--output-dir", type=Path, help="Keep a new run separate from published evidence")
 args = p.parse_args()
 root = Path(__file__).resolve().parents[2]
-out = Path(__file__).resolve().parent / "results"
-out.mkdir(exist_ok=True)
+out = args.output_dir.resolve() if args.output_dir else Path(__file__).resolve().parent / "results"
+out.mkdir(parents=True, exist_ok=True)
 stamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
 uart = serial.Serial(args.port, 115200, timeout=0.1)
 uart.reset_input_buffer()

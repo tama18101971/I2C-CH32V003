@@ -1,4 +1,4 @@
-# Надёжный драйвер шины I2C (I2C1) для CH32V003 (RISC-V) — Версия 7.2.0
+# Надёжный драйвер шины I2C (I2C1) для CH32V003 (RISC-V) — Версия 7.2.1
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -7,6 +7,13 @@
 Драйвер аппаратного I2C1 для **CH32V003** с ограниченными polling-ожиданиями, диагностикой ошибок и восстановлением шины с одним мастером. Использует регистры и заголовки WCH NoneOS SDK. Проверенные сценарии и ограничения приведены ниже и в отчёте аппаратных испытаний.
 
 ---
+
+## Что изменилось в 7.2.1
+
+- Объединены проверяемые ожидания STAR1/idle, завершение TX/RX и адресные префиксы; упрощён расчёт tBUF. API и защитные проверки сохранены.
+- Flash: Register Full **2432 Б** (−104 Б), весь API Full **2852 Б** (−124 Б), Register Lite **1976 Б** (−100 Б); RAM не выросла.
+- Повторно прошли 396 host-тестов и 101 346 проверок на реальной плате COM6 без ошибок. [Размеры, журналы и ограничения](test/optimization/RESULTS.md).
+- `run_hil.py --output-dir` позволяет сохранять повторные испытания отдельно от прежних журналов.
 
 ## Что изменилось в 7.2.0
 
@@ -403,7 +410,7 @@ int main(void) {
 
 ```ini
 lib_deps =
-    https://github.com/tama18101971/I2C-CH32V003.git#v7.2.0
+    https://github.com/tama18101971/I2C-CH32V003.git#v7.2.1
 ```
 
 Проверенное окружение: PlatformIO Core 6.2.0, `framework = noneos-sdk`, плата `genericCH32V003F4P6`. Ревизии platform и SDK закреплены в [корневом platformio.ini](platformio.ini) и конфигурациях примеров.
@@ -450,7 +457,7 @@ build_flags =
     -DI2C_DISABLE_LAST_ERROR      ; убрать i2c_get_last_star1()
 ```
 
-Независимо от этих флагов включите LTO — это ничего не стоит и экономит Flash в проверенных сборках (264 B для Register full и 124 B для Register Lite):
+Независимо от этих флагов включите LTO — это ничего не стоит и экономит Flash в проверенных сборках (240 B для Register full и 176 B для Register Lite):
 
 ```ini
 board_build.use_lto = yes
@@ -475,23 +482,23 @@ board_build.use_lto = yes
 | `i2c_bus_recovery` (Clock Recovery) | **−** | + |
 | Счётчик `consecutive_errors` | **−** | + |
 
-### Измеренный размер Flash (v7.2.0)
+### Измеренный размер Flash (v7.2.1)
 
-GCC 12.2.0, CH32V003F4P6, LTO, суммы ELF сверены с binary. Полная таблица и условия: [результаты](test/hardware/RESULTS.md).
+GCC 12.2.0, CH32V003F4P6, LTO, суммы ELF сверены с binary. Полная таблица и условия: [результаты](test/optimization/RESULTS.md).
 
 | Профиль | Flash | RAM, включая резерв стека 256 байт |
 |---|---:|---:|
-| Register API full | 2536 B | 296 B |
-| Register API no recovery | 2076 B | 292 B |
-| Register API no error counter | 2464 B | 296 B |
-| Register API no buffer | 2536 B | 296 B |
-| Register API Lite | 2076 B | 292 B |
-| All API full | 2976 B | 296 B |
-| All API no buffer | 2684 B | 296 B |
-| All API no scanner | 2928 B | 296 B |
-| All API Lite | 2156 B | 292 B |
-| Register full without LTO | 2800 B | 296 B |
-| Register Lite without LTO | 2200 B | 292 B |
+| Register API full | 2432 B | 296 B |
+| Register API no recovery | 1976 B | 292 B |
+| Register API no error counter | 2364 B | 296 B |
+| Register API no buffer | 2432 B | 296 B |
+| Register API Lite | 1976 B | 292 B |
+| All API full | 2852 B | 296 B |
+| All API no buffer | 2584 B | 296 B |
+| All API no scanner | 2804 B | 296 B |
+| All API Lite | 2088 B | 292 B |
+| Register full without LTO | 2672 B | 296 B |
+| Register Lite without LTO | 2152 B | 292 B |
 
 ## Тестирование
 
@@ -507,7 +514,7 @@ GCC 12.2.0, CH32V003F4P6, LTO, суммы ELF сверены с binary. Полн
 & "$HOME/.platformio/penv/Scripts/python.exe" test/hardware/run_hil.py --env hardware_apds_polling
 ```
 
-[Отчёт и первичные журналы](test/hardware/RESULTS.md) отделяют программные проверки от квалификации осциллограмм. На плате проверены 15 сочетаний CPU/скорости, чтения 1/2/3/4/5/8/16, запись с обратным чтением, нагрузка ISR, NACK, BTF timeout/recovery и восстановление настроек датчика. Физическое удержание линий, ARLO со вторым мастером, EEPROM с 16-битной адресацией, аналоговые параметры и 24-часовой soak требуют дополнительного оборудования; такие испытания не заявляются.
+[Отчёт и первичные журналы](test/optimization/RESULTS.md) отделяют программные проверки от квалификации осциллограмм. На плате проверены 15 сочетаний CPU/скорости, чтения 1/2/3/4/5/8/16, запись с обратным чтением, нагрузка ISR, NACK, BTF timeout/recovery и восстановление настроек датчика. Физическое удержание линий, ARLO со вторым мастером, EEPROM с 16-битной адресацией, аналоговые параметры и 24-часовой soak требуют дополнительного оборудования; такие испытания не заявляются.
 
 ## Лицензия
 

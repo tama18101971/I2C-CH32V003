@@ -1,0 +1,489 @@
+Compiler: C:\Users\tamag\.platformio\packages\toolchain-gccmingw32\bin\g++.exe
+
+====================================================================
+ Build & run: default
+====================================================================
+=== I2C-CH32V003 host tests ===
+config: ATOMIC_CRITICAL=0 LEGACY_STATUS=0 LITE=0
+
+[ RUN ] init: программирование CTLR2/CKCFGR/OADDR1 и включение тактов
+[ RUN ] init: fast mode 400 кГц выставляет FS и CCR = PCLK/(3*speed)
+[ RUN ] init: отвергает speed = 0 и speed > 400 кГц
+[ RUN ] init: отвергает SystemCoreClock вне диапазона 2..48 МГц
+[ RUN ] init: 2 МГц отвергаются, 8 МГц/400к не превышают запрос
+[ RUN ] init: недостижимо низкая скорость возвращает I2C_ERR_CLK (без тихого clamp)
+[ RUN ] CCR ceil: сетка 8/24/48MHz, Sm/Fm и дробные requests
+[ RUN ] ready+error: TXE/AF и ADDR/BERR не дают ложный success
+[ RUN ] ARLO: потерявший владение не выдаёт STOP/GPIO clocks
+[ RUN ] PE=0: low-level API не возвращает ложный success
+[ RUN ] probe: START/STOP timeout передаётся вызывающему
+[ RUN ] RX1/2/3/4: незавершённый STOP не даёт OK
+[ RUN ] RX-stage BERR: ACK/POS, snapshot и следующий обмен
+[ RUN ] RX0/1/2/3/4/5/8/16/255/65535: extra slave byte, guards и последний NACK
+[ RUN ] critical: исходные mstatus IRQ bits сохраняются при RX1/2
+[ RUN ] SCL held LOW: failed recovery PE=0, нет SWRST, reinit после release
+[ RUN ] start/stop: START поднимает SB, STOP снимает BUSY
+[ RUN ] send_addr: адрес маскируется до 7 бит (0xD0 -> 0x50)
+[ RUN ] send_addr: бит направления маскируется (direction=2 -> TX)
+[ RUN ] write_register: START + addr + reg + value + STOP
+[ RUN ] write_buffer: регистр + все байты буфера
+[ RUN ] write_buffer16: 16-битный адрес передаётся big-endian
+[ RUN ] write_raw: передача без адреса регистра
+[ RUN ] write_buffer(len=0): выполняет START + addr + reg + STOP (контракт 6)
+[ RUN ] read_register (N=1): ACK=0 до сброса ADDR, STOP сразу после
+[ RUN ] read len=2: POS=1 и ACK=1 до адресации, ACK=0 сразу после сброса ADDR
+[ RUN ] read len=3: ACK=1 до адресации, ACK=0 перед третьим байтом
+[ RUN ] read len=8: все байты корректны, последний не подтверждается
+[ RUN ] read_buffer16: 16-битный адрес + repeated START + данные
+[ RUN ] read_raw: чтение без адреса регистра
+[ RUN ] read(len=0): возвращает I2C_OK, не задействуя шину
+[ RUN ] NACK на адресе: I2C_NACK, STOP выдан, снимок STAR1 содержит AF
+[ RUN ] NACK на данных: возвращается I2C_NACK
+[ RUN ] probe_address: ACK -> I2C_OK, отсутствие устройства -> I2C_NACK + AF в снимке
+[ RUN ] probe_address: NULL-указатели допустимы
+[ RUN ] BERR: код ошибки, снимок STAR1 и recovery по счётчику ошибок
+[ RUN ] ARLO: код I2C_ERR_ARLO и корректный снимок STAR1
+[ RUN ] счётчик ошибок: успешная транзакция сбрасывает накопленные ошибки
+[ RUN ] таймаут: зависшая шина даёт I2C_ERR_TIMEOUT и один recovery
+[ RUN ] таймаут BUSY: i2c_start() возвращает I2C_ERR_TIMEOUT
+[ RUN ] recovery: SDA stuck оставляет PE=0 без недопустимого SWRST
+[ RUN ] инвариант: ACK восстановлен после сбоя в цикле чтения
+[ RUN ] инвариант: POS сброшен и ACK восстановлен после сбоя чтения len=2
+[ RUN ] критические секции: EV6_3 защищён только при I2C_ATOMIC_CRITICAL=1
+[ RUN ] deinit: снимает PE, отключает такты I2C1 и переводит пины в аналоговый режим
+[ RUN ] повторная init после deinit восстанавливает рабочее состояние
+
+=== 46 tests, 0 failures ===
+
+====================================================================
+ Build & run: -DI2C_ATOMIC_CRITICAL=1
+====================================================================
+=== I2C-CH32V003 host tests ===
+config: ATOMIC_CRITICAL=1 LEGACY_STATUS=0 LITE=0
+
+[ RUN ] init: программирование CTLR2/CKCFGR/OADDR1 и включение тактов
+[ RUN ] init: fast mode 400 кГц выставляет FS и CCR = PCLK/(3*speed)
+[ RUN ] init: отвергает speed = 0 и speed > 400 кГц
+[ RUN ] init: отвергает SystemCoreClock вне диапазона 2..48 МГц
+[ RUN ] init: 2 МГц отвергаются, 8 МГц/400к не превышают запрос
+[ RUN ] init: недостижимо низкая скорость возвращает I2C_ERR_CLK (без тихого clamp)
+[ RUN ] CCR ceil: сетка 8/24/48MHz, Sm/Fm и дробные requests
+[ RUN ] ready+error: TXE/AF и ADDR/BERR не дают ложный success
+[ RUN ] ARLO: потерявший владение не выдаёт STOP/GPIO clocks
+[ RUN ] PE=0: low-level API не возвращает ложный success
+[ RUN ] probe: START/STOP timeout передаётся вызывающему
+[ RUN ] RX1/2/3/4: незавершённый STOP не даёт OK
+[ RUN ] RX-stage BERR: ACK/POS, snapshot и следующий обмен
+[ RUN ] RX0/1/2/3/4/5/8/16/255/65535: extra slave byte, guards и последний NACK
+[ RUN ] critical: исходные mstatus IRQ bits сохраняются при RX1/2
+[ RUN ] SCL held LOW: failed recovery PE=0, нет SWRST, reinit после release
+[ RUN ] start/stop: START поднимает SB, STOP снимает BUSY
+[ RUN ] send_addr: адрес маскируется до 7 бит (0xD0 -> 0x50)
+[ RUN ] send_addr: бит направления маскируется (direction=2 -> TX)
+[ RUN ] write_register: START + addr + reg + value + STOP
+[ RUN ] write_buffer: регистр + все байты буфера
+[ RUN ] write_buffer16: 16-битный адрес передаётся big-endian
+[ RUN ] write_raw: передача без адреса регистра
+[ RUN ] write_buffer(len=0): выполняет START + addr + reg + STOP (контракт 6)
+[ RUN ] read_register (N=1): ACK=0 до сброса ADDR, STOP сразу после
+[ RUN ] read len=2: POS=1 и ACK=1 до адресации, ACK=0 сразу после сброса ADDR
+[ RUN ] read len=3: ACK=1 до адресации, ACK=0 перед третьим байтом
+[ RUN ] read len=8: все байты корректны, последний не подтверждается
+[ RUN ] read_buffer16: 16-битный адрес + repeated START + данные
+[ RUN ] read_raw: чтение без адреса регистра
+[ RUN ] read(len=0): возвращает I2C_OK, не задействуя шину
+[ RUN ] NACK на адресе: I2C_NACK, STOP выдан, снимок STAR1 содержит AF
+[ RUN ] NACK на данных: возвращается I2C_NACK
+[ RUN ] probe_address: ACK -> I2C_OK, отсутствие устройства -> I2C_NACK + AF в снимке
+[ RUN ] probe_address: NULL-указатели допустимы
+[ RUN ] BERR: код ошибки, снимок STAR1 и recovery по счётчику ошибок
+[ RUN ] ARLO: код I2C_ERR_ARLO и корректный снимок STAR1
+[ RUN ] счётчик ошибок: успешная транзакция сбрасывает накопленные ошибки
+[ RUN ] таймаут: зависшая шина даёт I2C_ERR_TIMEOUT и один recovery
+[ RUN ] таймаут BUSY: i2c_start() возвращает I2C_ERR_TIMEOUT
+[ RUN ] recovery: SDA stuck оставляет PE=0 без недопустимого SWRST
+[ RUN ] инвариант: ACK восстановлен после сбоя в цикле чтения
+[ RUN ] инвариант: POS сброшен и ACK восстановлен после сбоя чтения len=2
+[ RUN ] критические секции: EV6_3 защищён только при I2C_ATOMIC_CRITICAL=1
+[ RUN ] deinit: снимает PE, отключает такты I2C1 и переводит пины в аналоговый режим
+[ RUN ] повторная init после deinit восстанавливает рабочее состояние
+
+=== 46 tests, 0 failures ===
+
+====================================================================
+ Build & run: -DI2C_LEGACY_STATUS=1
+====================================================================
+=== I2C-CH32V003 host tests ===
+config: ATOMIC_CRITICAL=0 LEGACY_STATUS=1 LITE=0
+
+[ RUN ] init: программирование CTLR2/CKCFGR/OADDR1 и включение тактов
+[ RUN ] init: fast mode 400 кГц выставляет FS и CCR = PCLK/(3*speed)
+[ RUN ] init: отвергает speed = 0 и speed > 400 кГц
+[ RUN ] init: отвергает SystemCoreClock вне диапазона 2..48 МГц
+[ RUN ] init: 2 МГц отвергаются, 8 МГц/400к не превышают запрос
+[ RUN ] init: недостижимо низкая скорость возвращает I2C_ERR_CLK (без тихого clamp)
+[ RUN ] CCR ceil: сетка 8/24/48MHz, Sm/Fm и дробные requests
+[ RUN ] ready+error: TXE/AF и ADDR/BERR не дают ложный success
+[ RUN ] ARLO: потерявший владение не выдаёт STOP/GPIO clocks
+[ RUN ] PE=0: low-level API не возвращает ложный success
+[ RUN ] probe: START/STOP timeout передаётся вызывающему
+[ RUN ] RX1/2/3/4: незавершённый STOP не даёт OK
+[ RUN ] RX-stage BERR: ACK/POS, snapshot и следующий обмен
+[ RUN ] RX0/1/2/3/4/5/8/16/255/65535: extra slave byte, guards и последний NACK
+[ RUN ] critical: исходные mstatus IRQ bits сохраняются при RX1/2
+[ RUN ] SCL held LOW: failed recovery PE=0, нет SWRST, reinit после release
+[ RUN ] start/stop: START поднимает SB, STOP снимает BUSY
+[ RUN ] send_addr: адрес маскируется до 7 бит (0xD0 -> 0x50)
+[ RUN ] send_addr: бит направления маскируется (direction=2 -> TX)
+[ RUN ] write_register: START + addr + reg + value + STOP
+[ RUN ] write_buffer: регистр + все байты буфера
+[ RUN ] write_buffer16: 16-битный адрес передаётся big-endian
+[ RUN ] write_raw: передача без адреса регистра
+[ RUN ] write_buffer(len=0): выполняет START + addr + reg + STOP (контракт 6)
+[ RUN ] read_register (N=1): ACK=0 до сброса ADDR, STOP сразу после
+[ RUN ] read len=2: POS=1 и ACK=1 до адресации, ACK=0 сразу после сброса ADDR
+[ RUN ] read len=3: ACK=1 до адресации, ACK=0 перед третьим байтом
+[ RUN ] read len=8: все байты корректны, последний не подтверждается
+[ RUN ] read_buffer16: 16-битный адрес + repeated START + данные
+[ RUN ] read_raw: чтение без адреса регистра
+[ RUN ] read(len=0): возвращает I2C_OK, не задействуя шину
+[ RUN ] NACK на адресе: I2C_NACK, STOP выдан, снимок STAR1 содержит AF
+[ RUN ] NACK на данных: возвращается I2C_NACK
+[ RUN ] probe_address: ACK -> I2C_OK, отсутствие устройства -> I2C_NACK + AF в снимке
+[ RUN ] probe_address: NULL-указатели допустимы
+[ RUN ] BERR: код ошибки, снимок STAR1 и recovery по счётчику ошибок
+[ RUN ] ARLO: код I2C_ERR_ARLO и корректный снимок STAR1
+[ RUN ] счётчик ошибок: успешная транзакция сбрасывает накопленные ошибки
+[ RUN ] таймаут: зависшая шина даёт I2C_ERR_TIMEOUT и один recovery
+[ RUN ] таймаут BUSY: i2c_start() возвращает I2C_ERR_TIMEOUT
+[ RUN ] recovery: SDA stuck оставляет PE=0 без недопустимого SWRST
+[ RUN ] инвариант: ACK восстановлен после сбоя в цикле чтения
+[ RUN ] инвариант: POS сброшен и ACK восстановлен после сбоя чтения len=2
+[ RUN ] критические секции: EV6_3 защищён только при I2C_ATOMIC_CRITICAL=1
+[ RUN ] deinit: снимает PE, отключает такты I2C1 и переводит пины в аналоговый режим
+[ RUN ] повторная init после deinit восстанавливает рабочее состояние
+
+=== 46 tests, 0 failures ===
+
+====================================================================
+ Build & run: -DI2C_TIMEOUT_MS=5
+====================================================================
+=== I2C-CH32V003 host tests ===
+config: ATOMIC_CRITICAL=0 LEGACY_STATUS=0 LITE=0
+
+[ RUN ] init: программирование CTLR2/CKCFGR/OADDR1 и включение тактов
+[ RUN ] init: fast mode 400 кГц выставляет FS и CCR = PCLK/(3*speed)
+[ RUN ] init: отвергает speed = 0 и speed > 400 кГц
+[ RUN ] init: отвергает SystemCoreClock вне диапазона 2..48 МГц
+[ RUN ] init: 2 МГц отвергаются, 8 МГц/400к не превышают запрос
+[ RUN ] init: недостижимо низкая скорость возвращает I2C_ERR_CLK (без тихого clamp)
+[ RUN ] CCR ceil: сетка 8/24/48MHz, Sm/Fm и дробные requests
+[ RUN ] ready+error: TXE/AF и ADDR/BERR не дают ложный success
+[ RUN ] ARLO: потерявший владение не выдаёт STOP/GPIO clocks
+[ RUN ] PE=0: low-level API не возвращает ложный success
+[ RUN ] probe: START/STOP timeout передаётся вызывающему
+[ RUN ] RX1/2/3/4: незавершённый STOP не даёт OK
+[ RUN ] RX-stage BERR: ACK/POS, snapshot и следующий обмен
+[ RUN ] RX0/1/2/3/4/5/8/16/255/65535: extra slave byte, guards и последний NACK
+[ RUN ] critical: исходные mstatus IRQ bits сохраняются при RX1/2
+[ RUN ] SCL held LOW: failed recovery PE=0, нет SWRST, reinit после release
+[ RUN ] start/stop: START поднимает SB, STOP снимает BUSY
+[ RUN ] send_addr: адрес маскируется до 7 бит (0xD0 -> 0x50)
+[ RUN ] send_addr: бит направления маскируется (direction=2 -> TX)
+[ RUN ] write_register: START + addr + reg + value + STOP
+[ RUN ] write_buffer: регистр + все байты буфера
+[ RUN ] write_buffer16: 16-битный адрес передаётся big-endian
+[ RUN ] write_raw: передача без адреса регистра
+[ RUN ] write_buffer(len=0): выполняет START + addr + reg + STOP (контракт 6)
+[ RUN ] read_register (N=1): ACK=0 до сброса ADDR, STOP сразу после
+[ RUN ] read len=2: POS=1 и ACK=1 до адресации, ACK=0 сразу после сброса ADDR
+[ RUN ] read len=3: ACK=1 до адресации, ACK=0 перед третьим байтом
+[ RUN ] read len=8: все байты корректны, последний не подтверждается
+[ RUN ] read_buffer16: 16-битный адрес + repeated START + данные
+[ RUN ] read_raw: чтение без адреса регистра
+[ RUN ] read(len=0): возвращает I2C_OK, не задействуя шину
+[ RUN ] NACK на адресе: I2C_NACK, STOP выдан, снимок STAR1 содержит AF
+[ RUN ] NACK на данных: возвращается I2C_NACK
+[ RUN ] probe_address: ACK -> I2C_OK, отсутствие устройства -> I2C_NACK + AF в снимке
+[ RUN ] probe_address: NULL-указатели допустимы
+[ RUN ] BERR: код ошибки, снимок STAR1 и recovery по счётчику ошибок
+[ RUN ] ARLO: код I2C_ERR_ARLO и корректный снимок STAR1
+[ RUN ] счётчик ошибок: успешная транзакция сбрасывает накопленные ошибки
+[ RUN ] таймаут: зависшая шина даёт I2C_ERR_TIMEOUT и один recovery
+[ RUN ] таймаут BUSY: i2c_start() возвращает I2C_ERR_TIMEOUT
+[ RUN ] recovery: SDA stuck оставляет PE=0 без недопустимого SWRST
+[ RUN ] инвариант: ACK восстановлен после сбоя в цикле чтения
+[ RUN ] инвариант: POS сброшен и ACK восстановлен после сбоя чтения len=2
+[ RUN ] критические секции: EV6_3 защищён только при I2C_ATOMIC_CRITICAL=1
+[ RUN ] deinit: снимает PE, отключает такты I2C1 и переводит пины в аналоговый режим
+[ RUN ] повторная init после deinit восстанавливает рабочее состояние
+
+=== 46 tests, 0 failures ===
+
+====================================================================
+ Build & run: -DI2C_DISABLE_ERROR_COUNTER
+====================================================================
+=== I2C-CH32V003 host tests ===
+config: ATOMIC_CRITICAL=0 LEGACY_STATUS=0 LITE=0
+
+[ RUN ] init: программирование CTLR2/CKCFGR/OADDR1 и включение тактов
+[ RUN ] init: fast mode 400 кГц выставляет FS и CCR = PCLK/(3*speed)
+[ RUN ] init: отвергает speed = 0 и speed > 400 кГц
+[ RUN ] init: отвергает SystemCoreClock вне диапазона 2..48 МГц
+[ RUN ] init: 2 МГц отвергаются, 8 МГц/400к не превышают запрос
+[ RUN ] init: недостижимо низкая скорость возвращает I2C_ERR_CLK (без тихого clamp)
+[ RUN ] CCR ceil: сетка 8/24/48MHz, Sm/Fm и дробные requests
+[ RUN ] ready+error: TXE/AF и ADDR/BERR не дают ложный success
+[ RUN ] ARLO: потерявший владение не выдаёт STOP/GPIO clocks
+[ RUN ] PE=0: low-level API не возвращает ложный success
+[ RUN ] probe: START/STOP timeout передаётся вызывающему
+[ RUN ] RX1/2/3/4: незавершённый STOP не даёт OK
+[ RUN ] RX-stage BERR: ACK/POS, snapshot и следующий обмен
+[ RUN ] RX0/1/2/3/4/5/8/16/255/65535: extra slave byte, guards и последний NACK
+[ RUN ] critical: исходные mstatus IRQ bits сохраняются при RX1/2
+[ RUN ] SCL held LOW: failed recovery PE=0, нет SWRST, reinit после release
+[ RUN ] start/stop: START поднимает SB, STOP снимает BUSY
+[ RUN ] send_addr: адрес маскируется до 7 бит (0xD0 -> 0x50)
+[ RUN ] send_addr: бит направления маскируется (direction=2 -> TX)
+[ RUN ] write_register: START + addr + reg + value + STOP
+[ RUN ] write_buffer: регистр + все байты буфера
+[ RUN ] write_buffer16: 16-битный адрес передаётся big-endian
+[ RUN ] write_raw: передача без адреса регистра
+[ RUN ] write_buffer(len=0): выполняет START + addr + reg + STOP (контракт 6)
+[ RUN ] read_register (N=1): ACK=0 до сброса ADDR, STOP сразу после
+[ RUN ] read len=2: POS=1 и ACK=1 до адресации, ACK=0 сразу после сброса ADDR
+[ RUN ] read len=3: ACK=1 до адресации, ACK=0 перед третьим байтом
+[ RUN ] read len=8: все байты корректны, последний не подтверждается
+[ RUN ] read_buffer16: 16-битный адрес + repeated START + данные
+[ RUN ] read_raw: чтение без адреса регистра
+[ RUN ] read(len=0): возвращает I2C_OK, не задействуя шину
+[ RUN ] NACK на адресе: I2C_NACK, STOP выдан, снимок STAR1 содержит AF
+[ RUN ] NACK на данных: возвращается I2C_NACK
+[ RUN ] probe_address: ACK -> I2C_OK, отсутствие устройства -> I2C_NACK + AF в снимке
+[ RUN ] probe_address: NULL-указатели допустимы
+[ RUN ] BERR: код ошибки, снимок STAR1 и recovery по счётчику ошибок
+[ RUN ] ARLO: код I2C_ERR_ARLO и корректный снимок STAR1
+[ RUN ] таймаут: зависшая шина даёт I2C_ERR_TIMEOUT и один recovery
+[ RUN ] таймаут BUSY: i2c_start() возвращает I2C_ERR_TIMEOUT
+[ RUN ] recovery: SDA stuck оставляет PE=0 без недопустимого SWRST
+[ RUN ] инвариант: ACK восстановлен после сбоя в цикле чтения
+[ RUN ] инвариант: POS сброшен и ACK восстановлен после сбоя чтения len=2
+[ RUN ] критические секции: EV6_3 защищён только при I2C_ATOMIC_CRITICAL=1
+[ RUN ] deinit: снимает PE, отключает такты I2C1 и переводит пины в аналоговый режим
+[ RUN ] повторная init после deinit восстанавливает рабочее состояние
+
+=== 45 tests, 0 failures ===
+
+====================================================================
+ Build & run: -DI2C_DISABLE_BUS_RECOVERY
+====================================================================
+=== I2C-CH32V003 host tests ===
+config: ATOMIC_CRITICAL=0 LEGACY_STATUS=0 LITE=0
+
+[ RUN ] init: программирование CTLR2/CKCFGR/OADDR1 и включение тактов
+[ RUN ] init: fast mode 400 кГц выставляет FS и CCR = PCLK/(3*speed)
+[ RUN ] init: отвергает speed = 0 и speed > 400 кГц
+[ RUN ] init: отвергает SystemCoreClock вне диапазона 2..48 МГц
+[ RUN ] init: 2 МГц отвергаются, 8 МГц/400к не превышают запрос
+[ RUN ] init: недостижимо низкая скорость возвращает I2C_ERR_CLK (без тихого clamp)
+[ RUN ] CCR ceil: сетка 8/24/48MHz, Sm/Fm и дробные requests
+[ RUN ] ready+error: TXE/AF и ADDR/BERR не дают ложный success
+[ RUN ] ARLO: потерявший владение не выдаёт STOP/GPIO clocks
+[ RUN ] PE=0: low-level API не возвращает ложный success
+[ RUN ] probe: START/STOP timeout передаётся вызывающему
+[ RUN ] RX1/2/3/4: незавершённый STOP не даёт OK
+[ RUN ] RX-stage BERR: ACK/POS, snapshot и следующий обмен
+[ RUN ] RX0/1/2/3/4/5/8/16/255/65535: extra slave byte, guards и последний NACK
+[ RUN ] critical: исходные mstatus IRQ bits сохраняются при RX1/2
+[ RUN ] start/stop: START поднимает SB, STOP снимает BUSY
+[ RUN ] send_addr: адрес маскируется до 7 бит (0xD0 -> 0x50)
+[ RUN ] send_addr: бит направления маскируется (direction=2 -> TX)
+[ RUN ] write_register: START + addr + reg + value + STOP
+[ RUN ] write_buffer: регистр + все байты буфера
+[ RUN ] write_buffer16: 16-битный адрес передаётся big-endian
+[ RUN ] write_raw: передача без адреса регистра
+[ RUN ] write_buffer(len=0): выполняет START + addr + reg + STOP (контракт 6)
+[ RUN ] read_register (N=1): ACK=0 до сброса ADDR, STOP сразу после
+[ RUN ] read len=2: POS=1 и ACK=1 до адресации, ACK=0 сразу после сброса ADDR
+[ RUN ] read len=3: ACK=1 до адресации, ACK=0 перед третьим байтом
+[ RUN ] read len=8: все байты корректны, последний не подтверждается
+[ RUN ] read_buffer16: 16-битный адрес + repeated START + данные
+[ RUN ] read_raw: чтение без адреса регистра
+[ RUN ] read(len=0): возвращает I2C_OK, не задействуя шину
+[ RUN ] NACK на адресе: I2C_NACK, STOP выдан, снимок STAR1 содержит AF
+[ RUN ] NACK на данных: возвращается I2C_NACK
+[ RUN ] probe_address: ACK -> I2C_OK, отсутствие устройства -> I2C_NACK + AF в снимке
+[ RUN ] probe_address: NULL-указатели допустимы
+[ RUN ] BERR: код ошибки, снимок STAR1 и recovery по счётчику ошибок
+[ RUN ] ARLO: код I2C_ERR_ARLO и корректный снимок STAR1
+[ RUN ] таймаут: зависшая шина даёт I2C_ERR_TIMEOUT и один recovery
+[ RUN ] таймаут BUSY: i2c_start() возвращает I2C_ERR_TIMEOUT
+[ RUN ] инвариант: ACK восстановлен после сбоя в цикле чтения
+[ RUN ] инвариант: POS сброшен и ACK восстановлен после сбоя чтения len=2
+[ RUN ] критические секции: EV6_3 защищён только при I2C_ATOMIC_CRITICAL=1
+[ RUN ] deinit: снимает PE, отключает такты I2C1 и переводит пины в аналоговый режим
+[ RUN ] повторная init после deinit восстанавливает рабочее состояние
+
+=== 43 tests, 0 failures ===
+
+====================================================================
+ Build & run: -DI2C_DISABLE_BUFFER_API
+====================================================================
+=== I2C-CH32V003 host tests ===
+config: ATOMIC_CRITICAL=0 LEGACY_STATUS=0 LITE=0
+
+[ RUN ] init: программирование CTLR2/CKCFGR/OADDR1 и включение тактов
+[ RUN ] init: fast mode 400 кГц выставляет FS и CCR = PCLK/(3*speed)
+[ RUN ] init: отвергает speed = 0 и speed > 400 кГц
+[ RUN ] init: отвергает SystemCoreClock вне диапазона 2..48 МГц
+[ RUN ] init: 2 МГц отвергаются, 8 МГц/400к не превышают запрос
+[ RUN ] init: недостижимо низкая скорость возвращает I2C_ERR_CLK (без тихого clamp)
+[ RUN ] CCR ceil: сетка 8/24/48MHz, Sm/Fm и дробные requests
+[ RUN ] ready+error: TXE/AF и ADDR/BERR не дают ложный success
+[ RUN ] ARLO: потерявший владение не выдаёт STOP/GPIO clocks
+[ RUN ] PE=0: low-level API не возвращает ложный success
+[ RUN ] probe: START/STOP timeout передаётся вызывающему
+[ RUN ] SCL held LOW: failed recovery PE=0, нет SWRST, reinit после release
+[ RUN ] start/stop: START поднимает SB, STOP снимает BUSY
+[ RUN ] send_addr: адрес маскируется до 7 бит (0xD0 -> 0x50)
+[ RUN ] send_addr: бит направления маскируется (direction=2 -> TX)
+[ RUN ] write_register: START + addr + reg + value + STOP
+[ RUN ] read_register (N=1): ACK=0 до сброса ADDR, STOP сразу после
+[ RUN ] NACK на адресе: I2C_NACK, STOP выдан, снимок STAR1 содержит AF
+[ RUN ] NACK на данных: возвращается I2C_NACK
+[ RUN ] probe_address: ACK -> I2C_OK, отсутствие устройства -> I2C_NACK + AF в снимке
+[ RUN ] probe_address: NULL-указатели допустимы
+[ RUN ] BERR: код ошибки, снимок STAR1 и recovery по счётчику ошибок
+[ RUN ] ARLO: код I2C_ERR_ARLO и корректный снимок STAR1
+[ RUN ] счётчик ошибок: успешная транзакция сбрасывает накопленные ошибки
+[ RUN ] таймаут: зависшая шина даёт I2C_ERR_TIMEOUT и один recovery
+[ RUN ] таймаут BUSY: i2c_start() возвращает I2C_ERR_TIMEOUT
+[ RUN ] recovery: SDA stuck оставляет PE=0 без недопустимого SWRST
+[ RUN ] инвариант: ACK восстановлен после сбоя в цикле чтения
+[ RUN ] критические секции: EV6_3 защищён только при I2C_ATOMIC_CRITICAL=1
+[ RUN ] deinit: снимает PE, отключает такты I2C1 и переводит пины в аналоговый режим
+[ RUN ] повторная init после deinit восстанавливает рабочее состояние
+
+=== 31 tests, 0 failures ===
+
+====================================================================
+ Build & run: -DI2C_DISABLE_SCANNER
+====================================================================
+=== I2C-CH32V003 host tests ===
+config: ATOMIC_CRITICAL=0 LEGACY_STATUS=0 LITE=0
+
+[ RUN ] init: программирование CTLR2/CKCFGR/OADDR1 и включение тактов
+[ RUN ] init: fast mode 400 кГц выставляет FS и CCR = PCLK/(3*speed)
+[ RUN ] init: отвергает speed = 0 и speed > 400 кГц
+[ RUN ] init: отвергает SystemCoreClock вне диапазона 2..48 МГц
+[ RUN ] init: 2 МГц отвергаются, 8 МГц/400к не превышают запрос
+[ RUN ] init: недостижимо низкая скорость возвращает I2C_ERR_CLK (без тихого clamp)
+[ RUN ] CCR ceil: сетка 8/24/48MHz, Sm/Fm и дробные requests
+[ RUN ] ready+error: TXE/AF и ADDR/BERR не дают ложный success
+[ RUN ] ARLO: потерявший владение не выдаёт STOP/GPIO clocks
+[ RUN ] PE=0: low-level API не возвращает ложный success
+[ RUN ] RX1/2/3/4: незавершённый STOP не даёт OK
+[ RUN ] RX-stage BERR: ACK/POS, snapshot и следующий обмен
+[ RUN ] RX0/1/2/3/4/5/8/16/255/65535: extra slave byte, guards и последний NACK
+[ RUN ] critical: исходные mstatus IRQ bits сохраняются при RX1/2
+[ RUN ] SCL held LOW: failed recovery PE=0, нет SWRST, reinit после release
+[ RUN ] start/stop: START поднимает SB, STOP снимает BUSY
+[ RUN ] send_addr: адрес маскируется до 7 бит (0xD0 -> 0x50)
+[ RUN ] send_addr: бит направления маскируется (direction=2 -> TX)
+[ RUN ] write_register: START + addr + reg + value + STOP
+[ RUN ] write_buffer: регистр + все байты буфера
+[ RUN ] write_buffer16: 16-битный адрес передаётся big-endian
+[ RUN ] write_raw: передача без адреса регистра
+[ RUN ] write_buffer(len=0): выполняет START + addr + reg + STOP (контракт 6)
+[ RUN ] read_register (N=1): ACK=0 до сброса ADDR, STOP сразу после
+[ RUN ] read len=2: POS=1 и ACK=1 до адресации, ACK=0 сразу после сброса ADDR
+[ RUN ] read len=3: ACK=1 до адресации, ACK=0 перед третьим байтом
+[ RUN ] read len=8: все байты корректны, последний не подтверждается
+[ RUN ] read_buffer16: 16-битный адрес + repeated START + данные
+[ RUN ] read_raw: чтение без адреса регистра
+[ RUN ] read(len=0): возвращает I2C_OK, не задействуя шину
+[ RUN ] NACK на адресе: I2C_NACK, STOP выдан, снимок STAR1 содержит AF
+[ RUN ] NACK на данных: возвращается I2C_NACK
+[ RUN ] BERR: код ошибки, снимок STAR1 и recovery по счётчику ошибок
+[ RUN ] ARLO: код I2C_ERR_ARLO и корректный снимок STAR1
+[ RUN ] счётчик ошибок: успешная транзакция сбрасывает накопленные ошибки
+[ RUN ] таймаут: зависшая шина даёт I2C_ERR_TIMEOUT и один recovery
+[ RUN ] таймаут BUSY: i2c_start() возвращает I2C_ERR_TIMEOUT
+[ RUN ] recovery: SDA stuck оставляет PE=0 без недопустимого SWRST
+[ RUN ] инвариант: ACK восстановлен после сбоя в цикле чтения
+[ RUN ] инвариант: POS сброшен и ACK восстановлен после сбоя чтения len=2
+[ RUN ] критические секции: EV6_3 защищён только при I2C_ATOMIC_CRITICAL=1
+[ RUN ] deinit: снимает PE, отключает такты I2C1 и переводит пины в аналоговый режим
+[ RUN ] повторная init после deinit восстанавливает рабочее состояние
+
+=== 43 tests, 0 failures ===
+
+====================================================================
+ Build & run: -DI2C_LITE=1
+====================================================================
+=== I2C-CH32V003 host tests ===
+config: ATOMIC_CRITICAL=0 LEGACY_STATUS=0 LITE=1
+
+[ RUN ] init: программирование CTLR2/CKCFGR/OADDR1 и включение тактов
+[ RUN ] init: fast mode 400 кГц выставляет FS и CCR = PCLK/(3*speed)
+[ RUN ] init: отвергает speed = 0 и speed > 400 кГц
+[ RUN ] init: отвергает SystemCoreClock вне диапазона 2..48 МГц
+[ RUN ] init: 2 МГц отвергаются, 8 МГц/400к не превышают запрос
+[ RUN ] init: недостижимо низкая скорость возвращает I2C_ERR_CLK (без тихого clamp)
+[ RUN ] CCR ceil: сетка 8/24/48MHz, Sm/Fm и дробные requests
+[ RUN ] ready+error: TXE/AF и ADDR/BERR не дают ложный success
+[ RUN ] ARLO: потерявший владение не выдаёт STOP/GPIO clocks
+[ RUN ] PE=0: low-level API не возвращает ложный success
+[ RUN ] start/stop: START поднимает SB, STOP снимает BUSY
+[ RUN ] send_addr: адрес маскируется до 7 бит (0xD0 -> 0x50)
+[ RUN ] send_addr: бит направления маскируется (direction=2 -> TX)
+[ RUN ] write_register: START + addr + reg + value + STOP
+[ RUN ] read_register (N=1): ACK=0 до сброса ADDR, STOP сразу после
+[ RUN ] NACK на адресе: I2C_NACK, STOP выдан, снимок STAR1 содержит AF
+[ RUN ] NACK на данных: возвращается I2C_NACK
+[ RUN ] BERR: код ошибки, снимок STAR1 и recovery по счётчику ошибок
+[ RUN ] ARLO: код I2C_ERR_ARLO и корректный снимок STAR1
+[ RUN ] таймаут: зависшая шина даёт I2C_ERR_TIMEOUT и один recovery
+[ RUN ] таймаут BUSY: i2c_start() возвращает I2C_ERR_TIMEOUT
+[ RUN ] инвариант: ACK восстановлен после сбоя в цикле чтения
+[ RUN ] критические секции: EV6_3 защищён только при I2C_ATOMIC_CRITICAL=1
+[ RUN ] deinit: снимает PE, отключает такты I2C1 и переводит пины в аналоговый режим
+[ RUN ] повторная init после deinit восстанавливает рабочее состояние
+
+=== 25 tests, 0 failures ===
+
+====================================================================
+ Build & run: -DI2C_LITE=1 -DI2C_ATOMIC_CRITICAL=1
+====================================================================
+=== I2C-CH32V003 host tests ===
+config: ATOMIC_CRITICAL=1 LEGACY_STATUS=0 LITE=1
+
+[ RUN ] init: программирование CTLR2/CKCFGR/OADDR1 и включение тактов
+[ RUN ] init: fast mode 400 кГц выставляет FS и CCR = PCLK/(3*speed)
+[ RUN ] init: отвергает speed = 0 и speed > 400 кГц
+[ RUN ] init: отвергает SystemCoreClock вне диапазона 2..48 МГц
+[ RUN ] init: 2 МГц отвергаются, 8 МГц/400к не превышают запрос
+[ RUN ] init: недостижимо низкая скорость возвращает I2C_ERR_CLK (без тихого clamp)
+[ RUN ] CCR ceil: сетка 8/24/48MHz, Sm/Fm и дробные requests
+[ RUN ] ready+error: TXE/AF и ADDR/BERR не дают ложный success
+[ RUN ] ARLO: потерявший владение не выдаёт STOP/GPIO clocks
+[ RUN ] PE=0: low-level API не возвращает ложный success
+[ RUN ] start/stop: START поднимает SB, STOP снимает BUSY
+[ RUN ] send_addr: адрес маскируется до 7 бит (0xD0 -> 0x50)
+[ RUN ] send_addr: бит направления маскируется (direction=2 -> TX)
+[ RUN ] write_register: START + addr + reg + value + STOP
+[ RUN ] read_register (N=1): ACK=0 до сброса ADDR, STOP сразу после
+[ RUN ] NACK на адресе: I2C_NACK, STOP выдан, снимок STAR1 содержит AF
+[ RUN ] NACK на данных: возвращается I2C_NACK
+[ RUN ] BERR: код ошибки, снимок STAR1 и recovery по счётчику ошибок
+[ RUN ] ARLO: код I2C_ERR_ARLO и корректный снимок STAR1
+[ RUN ] таймаут: зависшая шина даёт I2C_ERR_TIMEOUT и один recovery
+[ RUN ] таймаут BUSY: i2c_start() возвращает I2C_ERR_TIMEOUT
+[ RUN ] инвариант: ACK восстановлен после сбоя в цикле чтения
+[ RUN ] критические секции: EV6_3 защищён только при I2C_ATOMIC_CRITICAL=1
+[ RUN ] deinit: снимает PE, отключает такты I2C1 и переводит пины в аналоговый режим
+[ RUN ] повторная init после deinit восстанавливает рабочее состояние
+
+=== 25 tests, 0 failures ===
+
+All configurations passed.

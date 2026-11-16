@@ -1,0 +1,59 @@
+Processing hardware_apds_polling (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git#499971abbee9d191c43132770be02fabfbf572cd; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-minichlink @ 0.1.0+sha.af02ba5 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wchisp @ 0.23.240914 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\hardware_apds_polling\lib22a\src\i2c.o
+Archiving .pio\build\hardware_apds_polling\lib22a\libsrc.a
+Linking .pio\build\hardware_apds_polling\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\hardware_apds_polling/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\hardware_apds_polling/firmware.debug.lst
+Checking size .pio\build\hardware_apds_polling\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [==        ]  24.8% (used 508 bytes from 2048 bytes)
+Flash: [=======   ]  70.7% (used 11588 bytes from 16384 bytes)
+Configuring upload protocol...
+AVAILABLE: isp, minichlink, wch-link, wlink
+CURRENT: upload_protocol = wch-link
+Uploading .pio\build\hardware_apds_polling\firmware.elf
+Open On-Chip Debugger 0.11.0+dev-snapshot (2026-02-25-15:11)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+debug_level: 1
+
+Warn : Transport "sdi" was already selected
+Ready for Remote Connections
+[wch_riscv.cpu.0] Target successfully examined.
+** Programming Started **
+** Programming Finished **
+** Verify Started **
+** Verified OK **
+** Resetting Target **
+shutdown command invoked
+========================= [SUCCESS] Took 4.81 seconds =========================
+
+Environment            Status    Duration
+---------------------  --------  ------------
+hardware_apds_polling  SUCCESS   00:00:04.813
+========================= 1 succeeded in 00:00:04.813 =========================

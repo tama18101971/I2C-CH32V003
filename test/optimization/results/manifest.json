@@ -1,0 +1,185 @@
+{
+  "change": "unreleased size optimization after v7.2.0",
+  "base_commit": "21bece91079e84ff3fa159578b7a67a0a2e48e36",
+  "date_local": "2026-11-17",
+  "timezone": "Europe/Volgograd",
+  "host_counts": [
+    46,
+    46,
+    46,
+    46,
+    45,
+    43,
+    31,
+    43,
+    25,
+    25
+  ],
+  "host_executions": 396,
+  "hardware": [
+    {
+      "started_utc": "2026-11-16T21:18:09.325112+00:00",
+      "environment": "hardware_apds",
+      "port": "COM6",
+      "upload_exit": 0,
+      "done_received": true,
+      "checks": 76788,
+      "failures": 0,
+      "id": 158,
+      "irq": 4840,
+      "max_ticks": 105451,
+      "datasheet_identity_match": false,
+      "transport_pass": true
+    },
+    {
+      "started_utc": "2026-11-16T21:19:08.728683+00:00",
+      "environment": "hardware_apds_polling",
+      "port": "COM6",
+      "upload_exit": 0,
+      "done_received": true,
+      "checks": 24558,
+      "failures": 0,
+      "id": 158,
+      "irq": 0,
+      "max_ticks": 105453,
+      "datasheet_identity_match": false,
+      "transport_pass": true
+    }
+  ],
+  "hardware_assertions_total": 101346,
+  "mutations_detected": 5,
+  "public_header_unchanged": true,
+  "builds": [
+    {
+      "environment": "scanner",
+      "before_flash_bytes": 8416,
+      "after_flash_bytes": 8324,
+      "saved_bytes": 92,
+      "saved_percent": 1.09,
+      "RAM_data_bss_stack": 468
+    },
+    {
+      "environment": "benchmark_full",
+      "before_flash_bytes": 2536,
+      "after_flash_bytes": 2432,
+      "saved_bytes": 104,
+      "saved_percent": 4.1,
+      "RAM_data_bss_stack": 296
+    },
+    {
+      "environment": "benchmark_no_recovery",
+      "before_flash_bytes": 2076,
+      "after_flash_bytes": 1976,
+      "saved_bytes": 100,
+      "saved_percent": 4.82,
+      "RAM_data_bss_stack": 292
+    },
+    {
+      "environment": "benchmark_no_error_counter",
+      "before_flash_bytes": 2464,
+      "after_flash_bytes": 2364,
+      "saved_bytes": 100,
+      "saved_percent": 4.06,
+      "RAM_data_bss_stack": 296
+    },
+    {
+      "environment": "benchmark_no_buffer",
+      "before_flash_bytes": 2536,
+      "after_flash_bytes": 2432,
+      "saved_bytes": 104,
+      "saved_percent": 4.1,
+      "RAM_data_bss_stack": 296
+    },
+    {
+      "environment": "benchmark_lite",
+      "before_flash_bytes": 2076,
+      "after_flash_bytes": 1976,
+      "saved_bytes": 100,
+      "saved_percent": 4.82,
+      "RAM_data_bss_stack": 292
+    },
+    {
+      "environment": "allapi_full",
+      "before_flash_bytes": 2976,
+      "after_flash_bytes": 2852,
+      "saved_bytes": 124,
+      "saved_percent": 4.17,
+      "RAM_data_bss_stack": 296
+    },
+    {
+      "environment": "allapi_no_buffer",
+      "before_flash_bytes": 2684,
+      "after_flash_bytes": 2584,
+      "saved_bytes": 100,
+      "saved_percent": 3.73,
+      "RAM_data_bss_stack": 296
+    },
+    {
+      "environment": "allapi_no_scanner",
+      "before_flash_bytes": 2928,
+      "after_flash_bytes": 2804,
+      "saved_bytes": 124,
+      "saved_percent": 4.23,
+      "RAM_data_bss_stack": 296
+    },
+    {
+      "environment": "allapi_lite",
+      "before_flash_bytes": 2156,
+      "after_flash_bytes": 2088,
+      "saved_bytes": 68,
+      "saved_percent": 3.15,
+      "RAM_data_bss_stack": 292
+    },
+    {
+      "environment": "nolto_full",
+      "before_flash_bytes": 2800,
+      "after_flash_bytes": 2672,
+      "saved_bytes": 128,
+      "saved_percent": 4.57,
+      "RAM_data_bss_stack": 296
+    },
+    {
+      "environment": "nolto_lite",
+      "before_flash_bytes": 2200,
+      "after_flash_bytes": 2152,
+      "saved_bytes": 48,
+      "saved_percent": 2.18,
+      "RAM_data_bss_stack": 292
+    },
+    {
+      "environment": "hardware_apds",
+      "before_flash_bytes": 12220,
+      "after_flash_bytes": 12108,
+      "saved_bytes": 112,
+      "saved_percent": 0.92,
+      "RAM_data_bss_stack": 508
+    },
+    {
+      "environment": "hardware_apds_polling",
+      "before_flash_bytes": 11708,
+      "after_flash_bytes": 11588,
+      "saved_bytes": 120,
+      "saved_percent": 1.02,
+      "RAM_data_bss_stack": 508
+    }
+  ],
+  "source_sha256": {
+    "src\\i2c.c": "546f2f2ecf860a9561c6fdef7832dba226511bec203f83fd2e4a4c36cdfa4c99",
+    "src\\i2c.h": "d7f2a386ba54c09d0310bc9eed4310a7ddb9a8b13de37ffe44979535e00a4818",
+    "test\\hardware\\apds9960.c": "8e855814a88b87c1bc619958bc3ccf5369e2a6933873aac9b24dd1c58fc84d7b"
+  },
+  "source_sha256_lf": {
+    "src\\i2c.c": "546f2f2ecf860a9561c6fdef7832dba226511bec203f83fd2e4a4c36cdfa4c99",
+    "src\\i2c.h": "9ba8ae1e53541e9ace94f7803aa9c778f4f31217cbfe2b5b448c0bb8d75f839c"
+  },
+  "firmware_sha256": {
+    "hardware_apds": "696e9ddd5cef63d4c0cd969730cc384f004e450465bad9dc4d9d5b4f42b42cd8",
+    "hardware_apds_polling": "9847a5ccee5076c924de5928252ef4d8ca7a0f288a26db6bd458dbe69ae080b4"
+  },
+  "flash_readback": {
+    "board_flash_sha256": "0addd6b10ca8b87a77dfd4c9e4c3017364d50d728ca529399eef3eed50d5b600",
+    "firmware_bin_sha256": "9847a5ccee5076c924de5928252ef4d8ca7a0f288a26db6bd458dbe69ae080b4",
+    "firmware_bytes": 11588,
+    "flash_matches_current_polling_build": true
+  }
+}

@@ -1,0 +1,154 @@
+[
+  {
+    "variant": "base",
+    "benchmark_full": 2536,
+    "allapi_full": 2976,
+    "benchmark_lite": 2076,
+    "nolto_full": 2800,
+    "hardware_apds": 12220
+  },
+  {
+    "variant": "tbuf",
+    "benchmark_full": 2528,
+    "allapi_full": 2968,
+    "benchmark_lite": 2040,
+    "nolto_full": 2788,
+    "hardware_apds": 12212
+  },
+  {
+    "variant": "tbuf_hw",
+    "benchmark_full": 2520,
+    "allapi_full": 2960,
+    "benchmark_lite": 2032,
+    "nolto_full": 2788,
+    "hardware_apds": 12212
+  },
+  {
+    "variant": "reg16",
+    "benchmark_full": 2536,
+    "allapi_full": 2964,
+    "benchmark_lite": 2076,
+    "nolto_full": 2800,
+    "hardware_apds": 12220
+  },
+  {
+    "variant": "tails",
+    "benchmark_full": 2536,
+    "allapi_full": 2976,
+    "benchmark_lite": 2076,
+    "nolto_full": 2800,
+    "hardware_apds": 12220
+  },
+  {
+    "variant": "finish",
+    "benchmark_full": 2536,
+    "allapi_full": 2964,
+    "benchmark_lite": 2076,
+    "nolto_full": 2780,
+    "hardware_apds": 12200
+  },
+  {
+    "variant": "combo",
+    "benchmark_full": 2520,
+    "allapi_full": 2940,
+    "benchmark_lite": 2032,
+    "nolto_full": 2768,
+    "hardware_apds": 12192
+  },
+  {
+    "variant": "combo",
+    "benchmark_full": 2520,
+    "allapi_full": 2940,
+    "benchmark_lite": 2032,
+    "nolto_full": 2768,
+    "hardware_apds": 12192
+  },
+  {
+    "variant": "wait",
+    "benchmark_full": 2520,
+    "allapi_full": 2940,
+    "benchmark_lite": 2032,
+    "nolto_full": 2768,
+    "hardware_apds": 12192
+  },
+  {
+    "variant": "i2c_read_1byte",
+    "benchmark_full": 2536,
+    "allapi_full": 2964,
+    "benchmark_lite": 2096,
+    "nolto_full": 2768,
+    "hardware_apds": 12192
+  },
+  {
+    "variant": "i2c_finish_receive",
+    "benchmark_full": 2524,
+    "allapi_full": 2940,
+    "benchmark_lite": 2036,
+    "nolto_full": 2768,
+    "hardware_apds": 12192
+  },
+  {
+    "variant": "i2c_wait_busy_clear",
+    "benchmark_full": 2520,
+    "allapi_full": 2940,
+    "benchmark_lite": 2032,
+    "nolto_full": 2768,
+    "hardware_apds": 12192
+  },
+  {
+    "variant": "i2c_start_reg_write",
+    "benchmark_full": 2520,
+    "allapi_full": 2940,
+    "benchmark_lite": 2032,
+    "nolto_full": 2768,
+    "hardware_apds": 12192
+  },
+  {
+    "variant": "i2c_wait_star1_flag",
+    "benchmark_full": 2520,
+    "allapi_full": 2940,
+    "benchmark_lite": 2032,
+    "nolto_full": 2768,
+    "hardware_apds": 12192
+  },
+  {
+    "variant": "read_finish",
+    "benchmark_full": 2540,
+    "allapi_full": 2964,
+    "benchmark_lite": 2100,
+    "nolto_full": 2768,
+    "hardware_apds": 12192
+  },
+  {
+    "variant": "shared",
+    "benchmark_full": 2432,
+    "allapi_full": 2852,
+    "benchmark_lite": 1976,
+    "nolto_full": 2672,
+    "hardware_apds": 12108
+  },
+  {
+    "variant": "shared_noinline",
+    "benchmark_full": 2432,
+    "allapi_full": 2852,
+    "benchmark_lite": 1976,
+    "nolto_full": 2672,
+    "hardware_apds": 12108
+  },
+  {
+    "variant": "shared_noclone",
+    "benchmark_full": 2432,
+    "allapi_full": 2852,
+    "benchmark_lite": 1976,
+    "nolto_full": 2672,
+    "hardware_apds": 12108
+  },
+  {
+    "variant": "shared32",
+    "benchmark_full": 2432,
+    "allapi_full": 2852,
+    "benchmark_lite": 1976,
+    "nolto_full": 2672,
+    "hardware_apds": 12108
+  }
+]

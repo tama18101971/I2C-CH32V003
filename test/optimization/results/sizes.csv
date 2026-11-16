@@ -1,0 +1,15 @@
+environment,before_flash_bytes,after_flash_bytes,saved_bytes,saved_percent,RAM_data_bss_stack
+scanner,8416,8324,92,1.09,468
+benchmark_full,2536,2432,104,4.1,296
+benchmark_no_recovery,2076,1976,100,4.82,292
+benchmark_no_error_counter,2464,2364,100,4.06,296
+benchmark_no_buffer,2536,2432,104,4.1,296
+benchmark_lite,2076,1976,100,4.82,292
+allapi_full,2976,2852,124,4.17,296
+allapi_no_buffer,2684,2584,100,3.73,296
+allapi_no_scanner,2928,2804,124,4.23,296
+allapi_lite,2156,2088,68,3.15,292
+nolto_full,2800,2672,128,4.57,296
+nolto_lite,2200,2152,48,2.18,292
+hardware_apds,12220,12108,112,0.92,508
+hardware_apds_polling,11708,11588,120,1.02,508

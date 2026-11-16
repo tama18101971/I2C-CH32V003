@@ -1,5 +1,5 @@
 /*
- * i2c.c — Блокирующий драйвер I2C1 для CH32V003 — Версия 7.2.0
+ * i2c.c — Блокирующий драйвер I2C1 для CH32V003 — Версия 7.2.1
  */
 
 #include "i2c.h"
@@ -101,8 +101,10 @@ static uint8_t i2c_wait_idle_raw(void);
  * интервал. В отличие от timeout loops это нижняя, а не точная оценка времени.
  */
 static void i2c_bus_free_delay(void) {
-    uint32_t us = i2c_speed > 100000UL ? 2UL : 5UL;
-    uint32_t loops = ((I2C1->CTLR2 & 0x3Fu) + 1UL) * us;
+    /* FS отражает успешно настроенный режим; длительности прежние: 2/5 мкс. */
+    uint32_t loops = (I2C1->CTLR2 & 0x3Fu) + 1UL;
+    if (I2C1->CKCFGR & I2C_CKCFGR_FS) loops *= 2UL;
+    else loops *= 5UL;
     while (loops--) __asm volatile("nop");
 }
 
@@ -413,23 +415,28 @@ static uint8_t i2c_wait_idle_raw(void) {
 }
 
 /**
- * @brief Общий цикл ожидания снятия флага BUSY с обработкой ошибок и recovery.
+ * @brief Общий checked polling: flag != 0 ждёт STAR1, flag == 0 — idle.
+ * @note Одна копия error-first/timeout логики. Raw idle cleanup остаётся
+ *       отдельным: он не должен повторно обрабатывать первичную ошибку.
  */
-static uint8_t i2c_wait_busy_clear(void) {
+static uint8_t i2c_wait_status(uint16_t flag) {
     uint32_t timeout = i2c_timeout_loops;
-    uint16_t star1;
     for (;;) {
-        star1 = I2C1->STAR1;
-        if (star1 & I2C_ERROR_MASK) {
-            return i2c_handle_error(star1);
-        }
-        if (!(I2C1->STAR2 & (I2C_STAR2_BUSY | I2C_STAR2_MSL)) &&
-            !(I2C1->CTLR1 & I2C_CTLR1_STOP)) return I2C_OK;
+        uint16_t star1 = I2C1->STAR1;
+        if (star1 & I2C_ERROR_MASK) return i2c_handle_error(star1);
+        if (flag) {
+            if (star1 & flag) return I2C_OK;
+        } else if (!(I2C1->STAR2 & (I2C_STAR2_BUSY | I2C_STAR2_MSL)) &&
+                   !(I2C1->CTLR1 & I2C_CTLR1_STOP)) return I2C_OK;
         if (--timeout == 0) {
             I2C_NOTE_ERROR(star1);
             return i2c_handle_timeout();
         }
     }
+}
+
+static uint8_t i2c_wait_busy_clear(void) {
+    return i2c_wait_status(0);
 }
 
 /**
@@ -441,29 +448,10 @@ uint8_t i2c_wait_bus_free(void) {
 
 /**
  * @brief Унифицированное ожидание бита флага в STAR1 с контролем ошибок и таймаута
- * @note Ошибка проверяется раньше ready в одном snapshot. Аварийное завершение
- *       централизовано в handler, без повторного STOP/recovery на этом уровне.
+ * @note Ошибка проверяется раньше ready в одном snapshot общим checked wait.
  */
 static uint8_t i2c_wait_star1_flag(uint16_t flag) {
-    uint32_t timeout = i2c_timeout_loops;
-    uint16_t star1;
-
-    for (;;) {
-        star1 = I2C1->STAR1;
-        if (star1 & I2C_ERROR_MASK) {
-            break;
-        }
-        if (star1 & flag) return I2C_OK;
-        if (--timeout == 0) {
-            break;
-        }
-    }
-
-    if (star1 & I2C_ERROR_MASK) return i2c_handle_error(star1);
-
-    /* Timeout: bounded GPIO recovery только в full; Lite требует reinit. */
-    I2C_NOTE_ERROR(star1);
-    return i2c_handle_timeout();
+    return i2c_wait_status(flag);
 }
 
 /**
@@ -495,15 +483,20 @@ uint8_t i2c_repeated_start(void) {
     return i2c_wait_start_bit();
 }
 
+/* Общий хвост TX/RX: STOP уже запрошен; подтвердить idle и выдержать tBUF. */
+static uint8_t i2c_finish_transfer(void) {
+    uint8_t res = i2c_wait_busy_clear();
+    if (res == I2C_OK) i2c_bus_free_delay();
+    return res;
+}
+
 /**
  * @brief Генерация STOP условия с собственным таймаутом
  * @return I2C_OK если шина освободилась, иначе код ошибки
  */
 uint8_t i2c_stop(void) {
     I2C1->CTLR1 |= I2C_CTLR1_STOP;
-    uint8_t res = i2c_wait_busy_clear();
-    if (res == I2C_OK) i2c_bus_free_delay();
-    return res;
+    return i2c_finish_transfer();
 }
 
 /**
@@ -619,31 +612,18 @@ static uint8_t i2c_wait_flag_or_recover(uint16_t flag) {
  * @brief Начало транзакции записи в регистр устройства (START + dev_addr TX + reg_addr)
  */
 static uint8_t i2c_start_reg_write(uint8_t dev_addr, uint8_t reg_addr) {
-    uint8_t res;
-    if ((res = i2c_start()) != I2C_OK ||
-        (res = i2c_send_addr(dev_addr, I2C_DIR_TX)) != I2C_OK ||
-        (res = i2c_write_byte(reg_addr)) != I2C_OK) {
-        return res;
-    }
-    return I2C_OK;
+    uint8_t res = i2c_start();
+    if (res != I2C_OK) return res;
+    res = i2c_send_addr(dev_addr, I2C_DIR_TX);
+    return res != I2C_OK ? res : i2c_write_byte(reg_addr);
 }
 
 /**
  * @brief Начало транзакции чтения из регистра устройства (START + dev_addr TX + reg_addr + repeated START)
  */
 static uint8_t i2c_start_reg_read(uint8_t dev_addr, uint8_t reg_addr) {
-    uint8_t res;
-    if ((res = i2c_start_reg_write(dev_addr, reg_addr)) != I2C_OK ||
-        (res = i2c_repeated_start()) != I2C_OK) {
-        return res;
-    }
-    return I2C_OK;
-}
-
-static uint8_t i2c_finish_receive(void) {
-    uint8_t res = i2c_wait_busy_clear();
-    if (res == I2C_OK) i2c_bus_free_delay();
-    return res;
+    uint8_t res = i2c_start_reg_write(dev_addr, reg_addr);
+    return res != I2C_OK ? res : i2c_repeated_start();
 }
 
 /**
@@ -672,7 +652,7 @@ static uint8_t i2c_read_1byte(uint8_t dev_addr, uint8_t *p_buf) {
     }
     *p_buf = (uint8_t)I2C1->DATAR;
     I2C1->CTLR1 |= I2C_CTLR1_ACK;
-    return i2c_finish_receive();
+    return i2c_finish_transfer();
 }
 
 /**
@@ -755,7 +735,7 @@ static uint8_t i2c_read_bytes_rx(uint8_t dev_addr, uint8_t *p_buf, uint16_t len)
 
         I2C1->CTLR1 &= ~I2C_CTLR1_POS;
         I2C1->CTLR1 |= I2C_CTLR1_ACK;
-        return i2c_finish_receive();
+        return i2c_finish_transfer();
     }
 
     /* len >= 3: ACK=1 до адресации, сброс ADDR штатным путём (первый байт
@@ -797,7 +777,7 @@ static uint8_t i2c_read_bytes_rx(uint8_t dev_addr, uint8_t *p_buf, uint16_t len)
     *p_buf = (uint8_t)I2C1->DATAR;
 
     I2C1->CTLR1 |= I2C_CTLR1_ACK;
-    return i2c_finish_receive();
+    return i2c_finish_transfer();
 }
 
 /**
@@ -855,14 +835,8 @@ uint8_t i2c_read_raw(uint8_t dev_addr, uint8_t *p_buf, uint16_t len) {
  * @brief Начало транзакции с 16-битным адресом памяти/регистра (START + dev_addr TX + addr hi/lo)
  */
 static uint8_t i2c_start_reg16_write(uint8_t dev_addr, uint16_t reg_addr) {
-    uint8_t res;
-    if ((res = i2c_start()) != I2C_OK ||
-        (res = i2c_send_addr(dev_addr, I2C_DIR_TX)) != I2C_OK ||
-        (res = i2c_write_byte((uint8_t)(reg_addr >> 8))) != I2C_OK ||
-        (res = i2c_write_byte((uint8_t)(reg_addr & 0xFF))) != I2C_OK) {
-        return res;
-    }
-    return I2C_OK;
+    uint8_t res = i2c_start_reg_write(dev_addr, (uint8_t)(reg_addr >> 8));
+    return res != I2C_OK ? res : i2c_write_byte((uint8_t)reg_addr);
 }
 
 /**

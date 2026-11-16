@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [7.2.1] - 2026-11-17
+
+### Size optimization
+- Share checked STAR1/idle polling, TX/RX completion and register-address prefixes;
+  simplify tBUF mode selection without removing API or error/recovery checks.
+- Same toolchain, all 14 baseline builds reproduced: register Full 2536 → 2432 B,
+  all API Full 2976 → 2852 B, register Lite 2076 → 1976 B. RAM unchanged.
+- 396 host executions and 101,346 real-board assertions passed; five critical
+  regression mutations detected. See `test/optimization/RESULTS.md` for logs,
+  hashes, complete sizes and timing/qualification limits.
+- Add optional HIL `--output-dir` to preserve evidence from earlier runs.
+
 ## [7.2.0] - 2026-11-16
 
 ### Fixed

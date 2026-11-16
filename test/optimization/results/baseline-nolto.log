@@ -1,0 +1,98 @@
+Processing nolto_full (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git#499971abbee9d191c43132770be02fabfbf572cd; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 6 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\nolto_full\lib516\src\i2c.o
+Archiving .pio\build\nolto_full\lib516\libsrc.a
+Linking .pio\build\nolto_full\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\test\build\size-opt-work\.pio\build\nolto_full/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\test\build\size-opt-work\.pio\build\nolto_full/firmware.debug.lst
+Checking size .pio\build\nolto_full\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  14.5% (used 296 bytes from 2048 bytes)
+Flash: [==        ]  17.1% (used 2800 bytes from 16384 bytes)
+Building .pio\build\nolto_full\firmware.bin
+========================= [SUCCESS] Took 0.94 seconds =========================
+
+Processing nolto_lite (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git#499971abbee9d191c43132770be02fabfbf572cd; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 6 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\nolto_lite\FrameworkNoneOSCore\core_riscv.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSStartup\startup_ch32v00x.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSSSystem\system_ch32v00x.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSDebug\debug.o
+Compiling .pio\build\nolto_lite\FrameworkInitFini\cpp_support.o
+Compiling .pio\build\nolto_lite\examples\size_benchmark\src\main.o
+Compiling .pio\build\nolto_lite\lib516\src\i2c.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_adc.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_dbgmcu.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_dma.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_exti.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_flash.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_gpio.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_i2c.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_iwdg.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_misc.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_opa.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_pwr.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_rcc.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_spi.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_tim.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_usart.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_wwdg.o
+Archiving .pio\build\nolto_lite\lib516\libsrc.a
+Archiving .pio\build\nolto_lite\libFrameworkNoneOSVariant.a
+Linking .pio\build\nolto_lite\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\test\build\size-opt-work\.pio\build\nolto_lite/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\test\build\size-opt-work\.pio\build\nolto_lite/firmware.debug.lst
+Checking size .pio\build\nolto_lite\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  14.3% (used 292 bytes from 2048 bytes)
+Flash: [=         ]  13.4% (used 2200 bytes from 16384 bytes)
+Building .pio\build\nolto_lite\firmware.bin
+========================= [SUCCESS] Took 1.24 seconds =========================
+
+Environment    Status    Duration
+-------------  --------  ------------
+nolto_full     SUCCESS   00:00:00.940
+nolto_lite     SUCCESS   00:00:01.237
+========================= 2 succeeded in 00:00:02.178 =========================
