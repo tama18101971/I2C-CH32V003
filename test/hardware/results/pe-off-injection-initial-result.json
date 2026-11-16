@@ -1,0 +1,14 @@
+{
+  "started_utc": "2026-11-16T20:21:07.700152+00:00",
+  "environment": "hardware_apds",
+  "port": "COM6",
+  "upload_exit": 0,
+  "done_received": true,
+  "checks": 76783,
+  "failures": 2,
+  "id": 158,
+  "irq": 4778,
+  "max_ticks": 105437,
+  "datasheet_identity_match": false,
+  "transport_pass": false
+}

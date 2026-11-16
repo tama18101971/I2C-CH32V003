@@ -2,6 +2,53 @@
 
 All notable changes to this project will be documented in this file.
 
+## [7.2.0] - 2026-11-16
+
+### Fixed
+- Prefer BERR/ARLO/AF over ready flags in the same STAR1 snapshot. Preserve the
+  primary snapshot if cleanup times out; propagate START/STOP errors from probe.
+- Verify STOP completion after all receive lengths; retain the WCH POS/ACK
+  ordering for two-byte reads. Save/restore incoming mstatus IRQ bits instead
+  of unconditionally enabling interrupts in critical sections.
+- Use ceiling division for CCR and a conservative 8..48 MHz PCLK/HCLK range.
+  Validate fixed-clock and timeout macro ranges; reject low-level transfers
+  when PE is disabled. Add a conservative post-STOP bus-free guard.
+- Bound and check GPIO recovery: preload released latches, verify SCL-high,
+  issue at most nine clocks, verify both lines before SWRST and check final idle.
+  New `I2C_ERR_RECOVERY=6` means PE is disabled and successful init is required.
+  Legacy status maps this failure to NACK. ARLO never requests STOP/recovery.
+- Select exactly one main file in the standalone size benchmark.
+
+### Documentation and packaging
+- Align English and Russian READMEs with the 7.2.0 API, recovery lifecycle,
+  remap requirements, measured sizes and hardware-test limitations.
+- Correct DAC7571 Power-Down bits to 5:4 and preserve transfer/STOP errors in
+  low-level examples; clarify EEPROM page/bank/write-cycle responsibilities.
+- Pin tested platform/SDK revisions and PlatformIO Core 6.2.0 in CI. Validate
+  exported package links and an isolated all-API consumer build; run CI on tags.
+- Include text hardware evidence in the package; exclude audit dependencies,
+  generated machine configuration and binary dumps.
+
+### Validation
+- Expanded host suite: 46 tests in the full profile, 396 test-function executions
+  across ten configurations; includes RX-stage faults, ready+error, STOP failure,
+  IRQ preservation, line-stuck recovery and lengths through 65535 with guards.
+- Real CH32V003F4P6 + user-confirmed APDS-compatible clone (ID 0x9E), COM6:
+  76,788 checks with atomic critical sections/4,266 long timer ISRs and 24,558
+  checks in polling mode, zero final failures. CPU 8/24/48 MHz, requested I2C
+  10/50/100/200/400 kHz; reads 1/2/3/4/5/8/16, write/readback, NACK and BTF
+  timeout/recovery, restoration verified. See `test/hardware/RESULTS.md`.
+- These are transport/firmware checks, not measured SCL or analog qualification.
+  No physical held-line injection, second-master arbitration or 24-hour soak
+  was performed. The original APDS datasheet ID is 0xAB; clone identity is explicit.
+
+### Footprint
+- Register full: 2536 B Flash / 296 B RAM (was 2172 / 296).
+- All API full: 2976 B Flash / 296 B RAM (was 2596 / 296).
+- Register Lite: 2076 B Flash / 292 B RAM (was 1704 / 292).
+  Size increases retain checked completion/recovery and error handling; no
+  dynamic allocation or large buffers were added to the MCU driver.
+
 ## [7.1.0] - 2026-09-03
 
 ### 🛡️ Robustness & Safety

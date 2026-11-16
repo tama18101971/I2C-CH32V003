@@ -1,0 +1,20 @@
+Open On-Chip Debugger 0.11.0+dev-snapshot (2026-02-25-15:11)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : only one transport option; autoselect 'sdi'
+Warn : Transport "sdi" was already selected
+Ready for Remote Connections
+Info : WCH-LinkE  mode:RV version 2.12 
+Info : wlink_init ok
+Warn : unknow speed config
+Warn : unknow speed config
+Info : clock speed 1000 kHz
+Info : [wch_riscv.cpu.0] datacount=2 progbufsize=8
+Info : [wch_riscv.cpu.0] Examined RISC-V core; found 1 harts
+Info : [wch_riscv.cpu.0]  XLEN=32, misa=0x40800014
+[wch_riscv.cpu.0] Target successfully examined.
+Info : gdb port disabled
+Error: [wch_riscv.cpu.0] unable to resume
+Error: [wch_riscv.cpu.0]   dmstatus=0x004c0c82
+

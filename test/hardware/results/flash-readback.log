@@ -1,0 +1,4 @@
+20:37:02 [INFO] Connected to WCH-Link v2.12(v32) (WCH-LinkE-CH32V305)
+20:37:02 [INFO] Attached chip: CH32V003 [CH32V003F4P6] (ChipID: 0x00300500)
+20:37:02 [INFO] Read memory from 0x00000000 to 0x00004000
+20:37:02 [INFO] 16384 bytes written to file test/hardware/results/final-board-flash.bin

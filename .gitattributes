@@ -1,0 +1,2 @@
+# Preserve captured tool/UART output, including line endings and trailing spaces.
+test/hardware/results/*.log -text -whitespace

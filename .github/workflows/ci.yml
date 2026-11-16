@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - master
+    tags:
+      - 'v*'
 
   pull_request:
     branches:
@@ -12,6 +14,9 @@ on:
       - master
 
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   unit-tests:
@@ -73,6 +78,8 @@ jobs:
           - allapi_lite
           - nolto_full
           - nolto_lite
+          - hardware_apds
+          - hardware_apds_polling
 
     steps:
       - name: Checkout repository
@@ -97,7 +104,7 @@ jobs:
       - name: Install PlatformIO
         run: |
           pip install --upgrade pip
-          pip install --upgrade platformio
+          pip install platformio==6.2.0
 
       - name: Build
         run: pio run -e ${{ matrix.environment }}
@@ -177,6 +184,22 @@ jobs:
           name: size-report-${{ matrix.environment }}
           path: size-report-${{ matrix.environment }}.md
           if-no-files-found: error
+
+  package:
+    name: Release package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install PlatformIO
+        run: pip install platformio==6.2.0
+      - name: Export and validate installable package
+        run: |
+          mkdir -p test/build/release
+          pio pkg pack . --output test/build/release/I2C-CH32V003.tar.gz
+          python test/check_release.py test/build/release/I2C-CH32V003.tar.gz --build
 
   summary:
     name: Build Summary

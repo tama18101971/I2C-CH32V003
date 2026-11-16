@@ -42,6 +42,15 @@ void mock_stuck_busy(int on);
 
 /* Ведомый удерживает линии в низком уровне (проверка GPIO-recovery). */
 void mock_lines_stuck(int sda_low, int scl_low);
+/* Ошибка на STAR1 polling после N прочитанных RX bytes (включая 0). */
+void mock_inject_rx_fault(uint16_t star1_flag, int after_reads);
+/* Следующий STOP не снимает BUSY; внутренний stuck сбрасывается SWRST. */
+void mock_fail_next_stop(void);
+void mock_inject_next_tx_status(uint16_t flags);
+void mock_set_irq_mask(uint32_t mask);
+uint32_t mock_irq_mask(void);
+uint16_t mock_star1(void);
+uint16_t mock_star2(void);
 
 /* --- Наблюдаемое состояние --- */
 

@@ -1,0 +1,6 @@
+{
+  "board_flash_sha256": "1d32f1a1b6e70cd74e4d34a57a06f38ae3b1ad64eb096ec620c1e4a91155cbcb",
+  "firmware_bin_sha256": "8c09ede589420e9b0da6d526def15c0b08b47be21fdc4aa97786cce7f58610e4",
+  "firmware_bytes": 11708,
+  "flash_matches_current_polling_build": true
+}

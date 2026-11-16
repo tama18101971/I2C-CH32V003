@@ -21,7 +21,7 @@
  * шине») и чтением DATAR. Подтверждение (ACK/NACK) для каждого принимаемого
  * байта берётся из бита ACK в CTLR1 на момент приёма этого байта — так же, как
  * в аппаратуре. Именно это позволяет проверить каноничность последовательностей
- * приёма для len = 1, 2 и N (RM0008 §26.3.3).
+ * приёма для len = 1, 2 и N (WCH RM v1.9 §§13.3,13.11.1).
  */
 
 #include "mock/ch32v00x.h"
@@ -40,7 +40,7 @@ uint32_t SystemCoreClock = 48000000UL;
 
 /* === Внутреннее состояние === */
 
-#define MOCK_MAX_LOG 64
+#define MOCK_MAX_LOG 65536
 
 enum Phase {
     PH_IDLE = 0,   /* шина свободна */
@@ -72,6 +72,7 @@ struct Model {
     uint8_t rx_shadow;
     int rx_done;              /* мастер уже выдал NACK — байт был последним */
     int stop_pending;         /* STOP запрограммирован, ждём вычитывания байт */
+    int rx_first_ack;
 
     /* Инъекции отказов */
     uint16_t addr_fault_flag;
@@ -80,6 +81,12 @@ struct Model {
     int stuck_busy;
     int sda_low;
     int scl_low;
+    int rx_fault_after_reads;
+    uint16_t rx_fault_flag;
+    uint16_t next_tx_flags;
+    int fail_next_stop;
+    int arlo_busy_reads;
+    uint32_t irq_mask;
 
     /* Наблюдение */
     int recovery_count;
@@ -137,6 +144,7 @@ void bus_release() {
     m.slave_tx_pos = 0;
     star1_clr((uint16_t)(I2C_STAR1_SB | I2C_STAR1_ADDR | I2C_STAR1_TXE |
                          I2C_STAR1_BTF | I2C_STAR1_RXNE));
+    m.reg[MOCK_I2C_CTLR1] &= (uint16_t)~I2C_CTLR1_STOP;
     if (!m.stuck_busy) {
         star2_clr((uint16_t)(I2C_STAR2_BUSY | I2C_STAR2_MSL | I2C_STAR2_TRA));
     }
@@ -156,8 +164,10 @@ void rx_receive_byte() {
         return;                     /* ведомому больше нечего отдавать */
     }
 
+    bool first = m.slave_tx_pos == 0;
     uint8_t byte = m.slave_tx[m.slave_tx_pos++];
-    bool acked = (ctlr1() & I2C_CTLR1_ACK) != 0;
+    bool acked = first && (ctlr1() & I2C_CTLR1_POS) ? m.rx_first_ack != 0 :
+                 (ctlr1() & I2C_CTLR1_ACK) != 0;
     log_ack(acked);
     if (!acked) {
         m.rx_done = 1;              /* дальше мастер приём не продолжит */
@@ -190,17 +200,14 @@ void on_write_ctlr1(uint16_t v) {
         m.reg[MOCK_I2C_CKCFGR] = 0;
         m.reg[MOCK_I2C_OADDR1] = 0;
         m.reg[MOCK_I2C_STAR1] = 0;
-        m.reg[MOCK_I2C_STAR2] = 0;
+        m.reg[MOCK_I2C_STAR2] = (m.sda_low || m.scl_low) ? I2C_STAR2_BUSY : 0;
         m.phase = PH_IDLE;
         m.addr_seen_star1 = 0;
         m.rx_shadow_valid = 0;
         m.rx_done = 0;
         m.stop_pending = 0;
         m.stuck_busy = 0;
-        if (m.pe_low_seen) {
-            m.recovery_count++;     /* PE=0 -> такты SCL -> SWRST */
-            m.pe_low_seen = 0;
-        }
+        m.pe_low_seen = 0;
         return;
     }
 
@@ -209,19 +216,22 @@ void on_write_ctlr1(uint16_t v) {
     }
 
     if (v & I2C_CTLR1_STOP) {
-        m.reg[MOCK_I2C_CTLR1] = (uint16_t)(v & (uint16_t)~I2C_CTLR1_STOP);
+        bool already_pending = (ctlr1() & I2C_CTLR1_STOP) != 0;
+        m.reg[MOCK_I2C_CTLR1] = v;
+        if (already_pending) return;
         m.stop_count++;
+        if (m.fail_next_stop) {
+            m.fail_next_stop = 0;
+            m.stuck_busy = 1;
+        }
         if (m.phase == PH_RX) {
             /* В аппаратуре STOP вступает в силу после текущего байта: уже
              * принятые байты остаются доступными для чтения. */
             if (m.stop_before_read_index < 0) {
                 m.stop_before_read_index = m.rx_read_count;
             }
-            m.rx_done = 1;
-            if ((star1() & I2C_STAR1_RXNE) || m.rx_shadow_valid) {
-                m.stop_pending = 1;
-                return;
-            }
+            m.stop_pending = 1;
+            return;
         }
         bus_release();
         return;
@@ -266,6 +276,13 @@ void on_write_datar(uint16_t v) {
         if (m.addr_fault_times > 0) {
             m.addr_fault_times--;
             star1_set(m.addr_fault_flag);
+            if (m.addr_fault_flag & I2C_STAR1_ARLO) {
+                star2_clr(I2C_STAR2_MSL | I2C_STAR2_TRA);
+                m.phase = PH_IDLE;
+                m.arlo_busy_reads = 3; /* Другой master пока владеет bus. */
+            } else if (!(v & 1)) {
+                star2_set(I2C_STAR2_TRA);
+            }
             return;
         }
 
@@ -286,6 +303,11 @@ void on_write_datar(uint16_t v) {
     }
 
     if (m.phase == PH_TX) {
+        if (m.next_tx_flags) {
+            star1_set(m.next_tx_flags);
+            m.next_tx_flags = 0;
+            return;
+        }
         /* Фаза данных, мастер-передатчик */
         if (m.nack_data_at >= 0 && m.data_index == m.nack_data_at) {
             m.data_index++;
@@ -343,11 +365,19 @@ extern "C" uint32_t mock_reg_read(int id) {
         }
         /* Опрос STAR1 в фазе приёма продвигает шину: приходит следующий байт. */
         if (m.phase == PH_RX) {
-            rx_receive_byte();
+            if (m.rx_fault_after_reads == m.rx_read_count && m.rx_fault_flag) {
+                star1_set(m.rx_fault_flag);
+                m.rx_fault_flag = 0;
+            } else {
+                rx_receive_byte();
+            }
         }
         return m.reg[MOCK_I2C_STAR1];
 
     case MOCK_I2C_STAR2:
+        if (m.arlo_busy_reads > 0 && --m.arlo_busy_reads == 0) {
+            star2_clr(I2C_STAR2_BUSY);
+        }
         if (m.addr_seen_star1 && (star1() & I2C_STAR1_ADDR)) {
             /* Канонический сброс ADDR: чтение STAR1, затем STAR2 */
             m.irq_depth_at_addr_clear = m.irq_depth;
@@ -360,7 +390,7 @@ extern "C" uint32_t mock_reg_read(int id) {
                 star1_set(I2C_STAR1_TXE);
             } else {
                 m.phase = PH_RX;
-                rx_receive_byte();      /* первый байт приходит сразу */
+                m.rx_first_ack = (ctlr1() & I2C_CTLR1_ACK) != 0;
             }
         }
         return m.reg[MOCK_I2C_STAR2];
@@ -372,6 +402,10 @@ extern "C" uint32_t mock_reg_read(int id) {
                 m.ctlr1_before_last_read = ctlr1();
             }
             m.rx_read_count++;
+            if (m.rx_fault_after_reads == m.rx_read_count && m.rx_fault_flag) {
+                star1_set(m.rx_fault_flag);
+                m.rx_fault_flag = 0;
+            }
             star1_clr((uint16_t)(I2C_STAR1_RXNE | I2C_STAR1_BTF));
 
             if (m.rx_shadow_valid) {
@@ -417,6 +451,12 @@ extern "C" void mock_reg_write(int id, uint32_t value) {
         on_write_bshr(value);
         return;
 
+    case MOCK_GPIOC_CFGLR:
+        if ((m.reg[id] & 0xFF0u) == 0xFF0u && (value & 0xFF0u) == 0x660u)
+            m.recovery_count++;
+        m.reg[id] = value;
+        return;
+
     default:
         m.reg[id] = value;
         return;
@@ -434,6 +474,27 @@ extern "C" void mock_enable_irq(void) {
     }
 }
 
+extern "C" uint32_t mock_irq_save(void) {
+    uint32_t saved = m.irq_mask;
+    m.irq_mask = 0;
+    mock_disable_irq();
+    return saved;
+}
+extern "C" void mock_irq_restore(uint32_t saved) {
+    m.irq_mask = saved;
+    mock_enable_irq();
+}
+extern "C" void mock_set_irq_mask(uint32_t mask) { m.irq_mask = mask & 0x88u; }
+extern "C" uint32_t mock_irq_mask(void) { return m.irq_mask; }
+extern "C" uint16_t mock_star1(void) { return star1(); }
+extern "C" uint16_t mock_star2(void) { return star2(); }
+extern "C" void mock_inject_rx_fault(uint16_t flag, int after_reads) {
+    m.rx_fault_flag = flag;
+    m.rx_fault_after_reads = after_reads;
+}
+extern "C" void mock_fail_next_stop(void) { m.fail_next_stop = 1; }
+extern "C" void mock_inject_next_tx_status(uint16_t flags) { m.next_tx_flags = flags; }
+
 /* === Публичный API модели === */
 
 extern "C" void mock_reset(void) {
@@ -443,6 +504,7 @@ extern "C" void mock_reset(void) {
     m.irq_depth_at_post_addr_write = -1;
     m.stop_before_read_index = -1;
     m.prev_scl_out = 1;
+    m.irq_mask = 0x88;
     m.reg[MOCK_GPIOC_OUTDR] = (1u << 1) | (1u << 2);   /* линии отпущены */
     m.reg[MOCK_GPIOC_INDR]  = (1u << 1) | (1u << 2);
     SystemCoreClock = 48000000UL;

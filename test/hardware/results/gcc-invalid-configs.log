@@ -1,0 +1,20 @@
+In file included from src/i2c.c:5:
+src/i2c.h:113:2: error: #error "I2C_FIXED_PCLK_HZ must be in 8..48 MHz"
+  113 | #error "I2C_FIXED_PCLK_HZ must be in 8..48 MHz"
+      |  ^~~~~
+In file included from src/i2c.c:5:
+src/i2c.h:103:2: error: #error "I2C_TIMEOUT_MS must be in 1..89478 (32-bit polling budget)"
+  103 | #error "I2C_TIMEOUT_MS must be in 1..89478 (32-bit polling budget)"
+      |  ^~~~~
+In file included from src/i2c.c:5:
+src/i2c.h:109:2: error: #error "I2C_MAX_ERROR_COUNT must be in 1..255"
+  109 | #error "I2C_MAX_ERROR_COUNT must be in 1..255"
+      |  ^~~~~
+src/i2c.c: In function 'handle_critical_error':
+src/i2c.c:160:28: warning: comparison is always false due to limited range of data type [-Wtype-limits]
+  160 |     if (consecutive_errors >= I2C_MAX_ERROR_COUNT) {
+      |                            ^~
+In file included from src/i2c.c:5:
+src/i2c.h:106:2: error: #error "I2C_STRETCH_TIMEOUT_US must be in 1..89478485"
+  106 | #error "I2C_STRETCH_TIMEOUT_US must be in 1..89478485"
+      |  ^~~~~

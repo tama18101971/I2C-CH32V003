@@ -1,0 +1,35 @@
+Processing ch32v003 (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 1 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- I2C-CH32V003 @ 7.2.0
+Building in release mode
+Compiling .pio\build\ch32v003\src\main.o
+Compiling .pio\build\ch32v003\lib5e3\I2C-CH32V003\i2c.o
+Archiving .pio\build\ch32v003\lib5e3\libI2C-CH32V003.a
+Linking .pio\build\ch32v003\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\examples\i2c_scanner\.pio\build\ch32v003/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\examples\i2c_scanner\.pio\build\ch32v003/firmware.debug.lst
+Checking size .pio\build\ch32v003\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [==        ]  23.0% (used 472 bytes from 2048 bytes)
+Flash: [=====     ]  54.3% (used 8904 bytes from 16384 bytes)
+Building .pio\build\ch32v003\firmware.bin
+========================= [SUCCESS] Took 0.93 seconds =========================

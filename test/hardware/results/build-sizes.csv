@@ -1,0 +1,15 @@
+environment,flash_bytes,RAM_data_bss_stack
+scanner,8416,468
+benchmark_full,2536,296
+benchmark_no_recovery,2076,292
+benchmark_no_error_counter,2464,296
+benchmark_no_buffer,2536,296
+benchmark_lite,2076,292
+allapi_full,2976,296
+allapi_no_buffer,2684,296
+allapi_no_scanner,2928,296
+allapi_lite,2156,292
+nolto_full,2800,296
+nolto_lite,2200,292
+hardware_apds,12220,508
+hardware_apds_polling,11708,508

@@ -1,0 +1,44 @@
+HIL START I2C 7.2.0 APDS9960 atomic=0 CPU=48000000
+INIT rc=0 lines=6
+APDS ID rc=0 value=9e
+IDENTITY reg90 len=1 rc=0 31 00 00 00
+IDENTITY reg90 len=2 rc=0 31 0a 00 00
+IDENTITY reg90 len=3 rc=0 31 0a 9e 00
+IDENTITY reg90 len=4 rc=0 31 0a 9e 22
+IDENTITY single rc=0 id=9e
+IDENTITY single rc=0 id=9e
+IDENTITY single rc=0 id=9e
+IDENTITY single rc=0 id=9e
+HIL WARN DATASHEET_ID_MISMATCH expected=ab actual=9e; testing transport and restorable register map only
+RATE CPU=8000000 request=10000 CCR=0190
+RATE DONE checks=1642 failures=0
+RATE CPU=8000000 request=50000 CCR=0050
+RATE DONE checks=3278 failures=0
+RATE CPU=8000000 request=100000 CCR=0028
+RATE DONE checks=4914 failures=0
+RATE CPU=8000000 request=200000 CCR=800e
+RATE DONE checks=6550 failures=0
+RATE CPU=8000000 request=400000 CCR=8007
+RATE DONE checks=8186 failures=0
+RATE CPU=24000000 request=10000 CCR=04b0
+RATE DONE checks=9822 failures=0
+RATE CPU=24000000 request=50000 CCR=00f0
+RATE DONE checks=11458 failures=0
+RATE CPU=24000000 request=100000 CCR=0078
+RATE DONE checks=13094 failures=0
+RATE CPU=24000000 request=200000 CCR=8028
+RATE DONE checks=14730 failures=0
+RATE CPU=24000000 request=400000 CCR=8014
+RATE DONE checks=16366 failures=0
+RATE CPU=48000000 request=10000 CCR=0960
+RATE DONE checks=18002 failures=0
+RATE CPU=48000000 request=50000 CCR=01e0
+RATE DONE checks=19638 failures=0
+RATE CPU=48000000 request=100000 CCR=00f0
+RATE DONE checks=21274 failures=0
+RATE CPU=48000000 request=200000 CCR=8050
+RATE DONE checks=22910 failures=0
+RATE CPU=48000000 request=400000 CCR=8028
+RATE DONE checks=24546 failures=0
+RECOVERY BTF_rc=2 failures=0
+HIL DONE checks=24558 failures=0 id=9e irq=0 max_ticks=105439

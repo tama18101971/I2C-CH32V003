@@ -1,0 +1,13 @@
+HIL START I2C 7.2.0 APDS9960 atomic=1 CPU=48000000
+INIT rc=0 lines=6
+APDS ID rc=0 value=9e
+IDENTITY reg90 len=1 rc=0 31 00 00 00
+IDENTITY reg90 len=2 rc=0 31 0a 00 00
+IDENTITY reg90 len=3 rc=0 31 0a 9e 00
+IDENTITY reg90 len=4 rc=0 31 0a 9e 62
+IDENTITY single rc=0 id=9e
+IDENTITY single rc=0 id=9e
+IDENTITY single rc=0 id=9e
+IDENTITY single rc=0 id=9e
+FAIL stage=1 APDS9960 ID=AB CTLR1=0401 STAR1=0000 STAR2=0000
+HIL DONE checks=3 failures=1 id=9e irq=0 max_ticks=0

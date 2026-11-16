@@ -7,7 +7,7 @@
  *
  * Покрываются: инициализация и валидация тактирования, START/STOP, адресная
  * фаза, запись, чтение len = 1 / 2 / 3 / N (включая каноничность ACK/POS/STOP
- * по RM0008 §26.3.3), NACK, BERR/ARLO, таймауты, восстановление шины,
+ * по WCH RM v1.9 §§13.3,13.11.1), NACK, BERR/ARLO, таймауты, восстановление шины,
  * критические секции, снимок последней ошибки и семантика len == 0.
  */
 
@@ -151,20 +151,18 @@ static void test_init_rejects_bad_clock(void) {
 }
 
 static void test_init_low_clock_min_ccr(void) {
-    begin("init: 2 МГц — CCR не опускается ниже 4");
+    begin("init: 2 МГц отвергаются, 8 МГц/400к не превышают запрос");
     mock_reset();
     SystemCoreClock = 2000000UL;
     mock_slave_present(0x50, nullptr, 0);
-    CHECK_EQ(i2c_init(100000), I2C_OK);
-    CHECK_EQ(mock_ckcfgr() & I2C_CKCFGR_CCR, 10);
-    CHECK_EQ(mock_ctlr2() & 0x3F, 2);
+    CHECK_EQ(i2c_init(100000), I2C_ERR_CLK);
 
     mock_reset();
-    SystemCoreClock = 2000000UL;
+    SystemCoreClock = 8000000UL;
     mock_slave_present(0x50, nullptr, 0);
     CHECK_EQ(i2c_init(400000), I2C_OK);
     CHECK(mock_ckcfgr() & I2C_CKCFGR_FS);
-    CHECK_EQ(mock_ckcfgr() & I2C_CKCFGR_CCR, 1);       /* min_ccr для fast mode */
+    CHECK_EQ(mock_ckcfgr() & I2C_CKCFGR_CCR, 7);
 }
 
 static void test_init_unreachable_speed_is_error(void) {
@@ -273,7 +271,7 @@ static void test_read_register_single(void) {
     CHECK_EQ(i2c_read_register(0x50, 0x10, &value), I2C_OK);
     CHECK_HEX(value, 0x5A);
 
-    /* RM §26.3.3, N=1: на момент сброса ADDR ACK обязан быть уже снят */
+    /* WCH RM v1.9 §13.11.1, N=1: на момент сброса ADDR ACK обязан быть уже снят */
     CHECK_EQ(mock_ctlr1_at_addr_clear() & I2C_CTLR1_ACK, 0);
     CHECK_EQ(mock_ctlr1_at_addr_clear() & I2C_CTLR1_POS, 0);
     /* STOP программируется до чтения единственного байта */
@@ -296,7 +294,7 @@ static void test_read_two_bytes(void) {
     CHECK_HEX(buf[0], 0xDE);
     CHECK_HEX(buf[1], 0xAD);
 
-    /* Канон RM §26.3.3 (N=2): POS=1 и ACK=1 на момент сброса ADDR */
+    /* Канон WCH RM v1.9 §13.11.1 (N=2): POS=1 и ACK=1 на момент сброса ADDR */
     CHECK(mock_ctlr1_at_addr_clear() & I2C_CTLR1_POS);
     CHECK(mock_ctlr1_at_addr_clear() & I2C_CTLR1_ACK);
     /* Немедленно после сброса ADDR ACK снимается (NACK уйдёт на 2-й байт) */
@@ -490,23 +488,24 @@ static void test_timeout_on_stuck_busy(void) {
 
 #ifndef I2C_DISABLE_BUS_RECOVERY
 static void test_recovery_generates_clocks(void) {
-    begin("recovery: генерируются такты SCL, выполняется SWRST и переконфигурация");
+    begin("recovery: SDA stuck оставляет PE=0 без недопустимого SWRST");
     init_ok();
     int swrst_before = mock_swrst_count();
 
     mock_lines_stuck(1, 0);                  /* ведомый удерживает SDA */
     mock_freeze(1);
-    CHECK_EQ(i2c_write_register(0x50, 0x00, 0x00), EXPECT_TIMEOUT);
+    CHECK_EQ(i2c_write_register(0x50, 0x00, 0x00),
+             I2C_LEGACY_STATUS ? I2C_NACK : I2C_ERR_RECOVERY);
 
     CHECK_EQ(mock_recovery_count(), 1);
-    CHECK(mock_scl_pulses() >= 16);          /* до 16 импульсов + STOP */
-    CHECK_EQ(mock_swrst_count(), swrst_before + 1);
-    /* Периферия переконфигурирована и снова включена */
-    CHECK_EQ(mock_ctlr2() & 0x3F, 48);
-    CHECK(mock_ctlr1() & I2C_CTLR1_PE);
-    CHECK(mock_ctlr1() & I2C_CTLR1_ACK);
-    /* GPIO возвращены в режим альтернативной функции */
-    CHECK_HEX(mock_gpioc_cfglr() & 0xFF0u, 0xFF0u);
+    CHECK_EQ(mock_scl_pulses(), 9);
+    CHECK_EQ(mock_swrst_count(), swrst_before);
+    CHECK_EQ(mock_ctlr1() & I2C_CTLR1_PE, 0);
+    CHECK_HEX(mock_gpioc_cfglr() & 0xFF0u, 0x660u);
+    mock_lines_stuck(0, 0);
+    mock_freeze(0);
+    CHECK_EQ(i2c_init(100000), I2C_OK);
+    CHECK_EQ(i2c_write_register(0x50, 0, 1), I2C_OK);
 }
 #endif /* I2C_DISABLE_BUS_RECOVERY */
 
@@ -578,6 +577,168 @@ static void test_reinit_after_deinit(void) {
 
 /* === Точка входа === */
 
+static void test_ready_does_not_hide_error(void) {
+    begin("ready+error: TXE/AF и ADDR/BERR не дают ложный success");
+    init_ok();
+    mock_inject_next_tx_status(I2C_STAR1_TXE | I2C_STAR1_AF);
+    CHECK_EQ(i2c_write_register(0x50, 0, 1), I2C_NACK);
+    CHECK_EQ(mock_star1() & I2C_STAR1_AF, 0);
+    CHECK_EQ(i2c_write_register(0x50, 0, 1), I2C_OK);
+    CHECK_EQ(i2c_start(), I2C_OK);
+    CHECK_EQ(i2c_send_addr(0x50, I2C_DIR_TX), I2C_OK);
+    mock_inject_next_tx_status(I2C_STAR1_TXE | I2C_STAR1_AF);
+    CHECK_EQ(i2c_send_byte(1), I2C_NACK);
+    CHECK_EQ(i2c_start(), I2C_OK);
+    mock_inject_addr_fault(I2C_STAR1_ADDR | I2C_STAR1_BERR, 1);
+    CHECK_EQ(i2c_send_addr(0x50, I2C_DIR_TX), EXPECT_BERR);
+#ifndef I2C_DISABLE_LAST_ERROR
+    CHECK(i2c_get_last_star1() & I2C_STAR1_BERR);
+#endif
+}
+
+static void test_arbitration_does_not_touch_bus(void) {
+    begin("ARLO: потерявший владение не выдаёт STOP/GPIO clocks");
+    init_ok();
+    mock_inject_addr_fault(I2C_STAR1_ARLO, 1);
+    CHECK_EQ(i2c_write_register(0x50, 0, 1), EXPECT_ARLO);
+    CHECK_EQ(mock_stop_count(), 0);
+    CHECK_EQ(mock_recovery_count(), 0);
+    CHECK_EQ(mock_star2() & I2C_STAR2_MSL, 0);
+    CHECK_EQ(i2c_write_register(0x50, 0, 1), I2C_OK);
+}
+
+static void test_disabled_peripheral_rejected(void) {
+    begin("PE=0: low-level API не возвращает ложный success");
+    init_ok();
+    i2c_deinit();
+    const unsigned err = I2C_LEGACY_STATUS ? I2C_NACK : I2C_ERR_RECOVERY;
+    CHECK_EQ(i2c_start(), err);
+    CHECK_EQ(i2c_repeated_start(), err);
+    CHECK_EQ(i2c_send_addr(0x50, I2C_DIR_TX), err);
+    CHECK_EQ(i2c_send_byte(1), err);
+}
+
+#ifndef I2C_DISABLE_SCANNER
+static void test_probe_propagates_start_and_stop_errors(void) {
+    begin("probe: START/STOP timeout передаётся вызывающему");
+    init_ok();
+    mock_stuck_busy(1);
+    CHECK_EQ(i2c_probe_address(0x50, nullptr, nullptr), EXPECT_TIMEOUT);
+    mock_stuck_busy(0);
+    CHECK_EQ(i2c_init(100000), I2C_OK);
+    mock_fail_next_stop();
+    CHECK_EQ(i2c_probe_address(0x50, nullptr, nullptr), EXPECT_TIMEOUT);
+}
+#endif
+
+#ifndef I2C_DISABLE_BUFFER_API
+static void test_receive_final_stop_errors(void) {
+    begin("RX1/2/3/4: незавершённый STOP не даёт OK");
+    for (unsigned n = 1; n <= 4; ++n) {
+        mock_reset();
+        const uint8_t tx[] = {1, 2, 3, 4, 5};
+        init_ok(tx, sizeof(tx));
+        mock_fail_next_stop();
+        uint8_t buf[4];
+        CHECK_EQ(i2c_read_raw(0x50, buf, (uint16_t)n), EXPECT_TIMEOUT);
+        CHECK_EQ(mock_ctlr1() & I2C_CTLR1_POS, 0);
+    }
+}
+
+static void test_receive_stage_errors_and_next_transaction(void) {
+    begin("RX-stage BERR: ACK/POS, snapshot и следующий обмен");
+    for (unsigned n = 1; n <= 5; ++n) {
+        for (unsigned point = 0; point < n; ++point) {
+            mock_reset();
+            const uint8_t tx[] = {1, 2, 3, 4, 5, 6};
+            init_ok(tx, sizeof(tx));
+            mock_inject_rx_fault(I2C_STAR1_BERR, (int)point);
+            uint8_t buf[8] = {};
+            CHECK(i2c_read_raw(0x50, buf, (uint16_t)n) != I2C_OK);
+            CHECK(mock_ctlr1() & I2C_CTLR1_ACK);
+            CHECK_EQ(mock_ctlr1() & I2C_CTLR1_POS, 0);
+#ifndef I2C_DISABLE_LAST_ERROR
+            CHECK(i2c_get_last_star1() & I2C_STAR1_BERR);
+#endif
+#ifdef I2C_DISABLE_BUS_RECOVERY
+            CHECK_EQ(i2c_init(100000), I2C_OK);
+#endif
+            CHECK_EQ(i2c_read_raw(0x50, buf, 1), I2C_OK);
+            CHECK_EQ(buf[0], 1);
+        }
+    }
+}
+
+static void test_receive_all_boundary_lengths(void) {
+    begin("RX0/1/2/3/4/5/8/16/255/65535: extra slave byte, guards и последний NACK");
+    static uint8_t tx[65536], buf[65537];
+    const unsigned lengths[] = {0, 1, 2, 3, 4, 5, 8, 16, 255, 65535};
+    for (unsigned i = 0; i < sizeof(tx); ++i) tx[i] = (uint8_t)(i * 37u);
+    for (unsigned n : lengths) {
+        mock_reset();
+        init_ok(tx, (int)n + 1);
+        std::memset(buf, 0xA5, sizeof(buf));
+        CHECK_EQ(i2c_read_raw(0x50, buf + 1, (uint16_t)n), I2C_OK);
+        CHECK_EQ(std::memcmp(buf + 1, tx, n), 0);
+        CHECK_EQ(buf[0], 0xA5);
+        CHECK_EQ(buf[n + 1], 0xA5);
+        CHECK_EQ(mock_rx_read_count(), n);
+        CHECK_EQ(mock_ack_log_len(), n);
+        bool acks = true;
+        for (unsigned i = 0; i < n; ++i)
+            if (mock_ack_log()[i] != (i + 1 < n ? 1 : 0)) acks = false;
+        CHECK(acks);
+    }
+}
+
+static void test_irq_mask_preserved(void) {
+    begin("critical: исходные mstatus IRQ bits сохраняются при RX1/2");
+    const uint32_t masks[] = {0, 8, 0x80, 0x88};
+    for (uint32_t mask : masks) {
+        for (unsigned n = 1; n <= 2; ++n) {
+            mock_reset();
+            const uint8_t tx[] = {1, 2, 3};
+            init_ok(tx, sizeof(tx));
+            mock_set_irq_mask(mask);
+            uint8_t buf[2];
+            CHECK_EQ(i2c_read_raw(0x50, buf, (uint16_t)n), I2C_OK);
+            CHECK_EQ(mock_irq_mask(), mask);
+        }
+    }
+}
+#endif
+
+#ifndef I2C_DISABLE_BUS_RECOVERY
+static void test_scl_stuck_fails_without_reset(void) {
+    begin("SCL held LOW: failed recovery PE=0, нет SWRST, reinit после release");
+    init_ok();
+    int resets = mock_swrst_count();
+    mock_lines_stuck(0, 1);
+    mock_freeze(1);
+    CHECK_EQ(i2c_write_register(0x50, 0, 1),
+             I2C_LEGACY_STATUS ? I2C_NACK : I2C_ERR_RECOVERY);
+    CHECK_EQ(mock_ctlr1() & I2C_CTLR1_PE, 0);
+    CHECK_EQ(mock_swrst_count(), resets);
+    mock_lines_stuck(0, 0);
+    mock_freeze(0);
+    CHECK_EQ(i2c_init(100000), I2C_OK);
+    CHECK_EQ(i2c_write_register(0x50, 0, 1), I2C_OK);
+}
+#endif
+
+static void test_clock_grid_never_overspeeds(void) {
+    begin("CCR ceil: сетка 8/24/48MHz, Sm/Fm и дробные requests");
+    const uint32_t clocks[] = {8000000, 24000000, 48000000};
+    const uint32_t rates[] = {10000, 50000, 100000, 100001, 123457, 200000, 399999, 400000};
+    for (uint32_t clk : clocks) for (uint32_t rate : rates) {
+        mock_reset();
+        SystemCoreClock = clk;
+        CHECK_EQ(i2c_init(rate), I2C_OK);
+        uint32_t ccr = mock_ckcfgr() & I2C_CKCFGR_CCR;
+        CHECK((uint64_t)rate * (rate > 100000 ? 3 : 2) * ccr >= clk);
+    }
+}
+
 int main(void) {
     std::printf("=== I2C-CH32V003 host tests ===\n");
     std::printf("config: ATOMIC_CRITICAL=%d LEGACY_STATUS=%d LITE=%d\n\n",
@@ -589,6 +750,22 @@ int main(void) {
     test_init_rejects_bad_clock();
     test_init_low_clock_min_ccr();
     test_init_unreachable_speed_is_error();
+    test_clock_grid_never_overspeeds();
+    test_ready_does_not_hide_error();
+    test_arbitration_does_not_touch_bus();
+    test_disabled_peripheral_rejected();
+#ifndef I2C_DISABLE_SCANNER
+    test_probe_propagates_start_and_stop_errors();
+#endif
+#ifndef I2C_DISABLE_BUFFER_API
+    test_receive_final_stop_errors();
+    test_receive_stage_errors_and_next_transaction();
+    test_receive_all_boundary_lengths();
+    test_irq_mask_preserved();
+#endif
+#ifndef I2C_DISABLE_BUS_RECOVERY
+    test_scl_stuck_fails_without_reset();
+#endif
 
     test_start_stop();
     test_send_addr_masks_address();

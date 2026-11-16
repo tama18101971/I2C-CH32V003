@@ -13,7 +13,7 @@
 
 .EXAMPLE
     pwsh test/run_tests.ps1
-    Прогон в конфигурации по умолчанию и с I2C_ATOMIC_CRITICAL=1.
+    Прогон десяти конфигураций: полный драйвер, atomic, legacy и отключаемые API.
 #>
 
 [CmdletBinding()]
@@ -51,6 +51,8 @@ function Resolve-Compiler {
 }
 
 $cxx = Resolve-Compiler
+# MinGW cc1plus/collect2 and executables also need the compiler's runtime DLLs.
+$env:Path = (Split-Path -Parent $cxx) + [IO.Path]::PathSeparator + $env:Path
 Write-Output "Compiler: $cxx"
 
 $outDir = Join-Path $testDir 'build'
@@ -70,7 +72,7 @@ foreach ($config in $Configs) {
 
     $args = @(
         '-std=c++11', '-O1', '-g',
-        '-Wall', '-Wextra',
+        '-Wall', '-Wextra', '-Werror',
         "-I$testDir/mock",
         "-I$repoRoot/src",
         "-I$testDir",

@@ -35,6 +35,9 @@ compile_commands.json
 # Host unit tests
 test/build/
 
+# Local audit workspace; third-party manuals and generated binaries are not release sources.
+audit/
+
 # Build artifacts
 *.o
 *.obj

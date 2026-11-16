@@ -1,0 +1,123 @@
+Processing scanner (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\scanner\examples\i2c_scanner\src\main.o
+Compiling .pio\build\scanner\lib22a\src\i2c.o
+Archiving .pio\build\scanner\libFrameworkNoneOSVariant.a
+Archiving .pio\build\scanner\lib22a\libsrc.a
+Indexing .pio\build\scanner\lib22a\libsrc.a
+Indexing .pio\build\scanner\libFrameworkNoneOSVariant.a
+Linking .pio\build\scanner\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\scanner/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\scanner/firmware.debug.lst
+Checking size .pio\build\scanner\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [==        ]  22.9% (used 468 bytes from 2048 bytes)
+Flash: [=====     ]  51.2% (used 8396 bytes from 16384 bytes)
+Building .pio\build\scanner\firmware.bin
+========================= [SUCCESS] Took 1.12 seconds =========================
+
+Processing allapi_full (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\allapi_full\examples\size_benchmark\src\main_allapi.o
+Compiling .pio\build\allapi_full\lib22a\src\i2c.o
+Archiving .pio\build\allapi_full\libFrameworkNoneOSVariant.a
+Indexing .pio\build\allapi_full\libFrameworkNoneOSVariant.a
+Archiving .pio\build\allapi_full\lib22a\libsrc.a
+Indexing .pio\build\allapi_full\lib22a\libsrc.a
+Linking .pio\build\allapi_full\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\allapi_full/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\allapi_full/firmware.debug.lst
+Checking size .pio\build\allapi_full\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  14.5% (used 296 bytes from 2048 bytes)
+Flash: [==        ]  17.9% (used 2932 bytes from 16384 bytes)
+Building .pio\build\allapi_full\firmware.bin
+========================= [SUCCESS] Took 1.02 seconds =========================
+
+Processing allapi_lite (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\allapi_lite\examples\size_benchmark\src\main_allapi.o
+Compiling .pio\build\allapi_lite\lib22a\src\i2c.o
+Archiving .pio\build\allapi_lite\libFrameworkNoneOSVariant.a
+Indexing .pio\build\allapi_lite\libFrameworkNoneOSVariant.a
+Archiving .pio\build\allapi_lite\lib22a\libsrc.a
+Indexing .pio\build\allapi_lite\lib22a\libsrc.a
+Linking .pio\build\allapi_lite\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\allapi_lite/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\allapi_lite/firmware.debug.lst
+Checking size .pio\build\allapi_lite\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  14.3% (used 292 bytes from 2048 bytes)
+Flash: [=         ]  12.4% (used 2028 bytes from 16384 bytes)
+Building .pio\build\allapi_lite\firmware.bin
+========================= [SUCCESS] Took 1.01 seconds =========================
+
+Environment    Status    Duration
+-------------  --------  ------------
+scanner        SUCCESS   00:00:01.124
+allapi_full    SUCCESS   00:00:01.015
+allapi_lite    SUCCESS   00:00:01.005
+========================= 3 succeeded in 00:00:03.145 =========================

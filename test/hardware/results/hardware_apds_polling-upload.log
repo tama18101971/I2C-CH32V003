@@ -1,0 +1,85 @@
+Processing hardware_apds_polling (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-minichlink @ 0.1.0+sha.af02ba5 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wchisp @ 0.23.240914 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSCore\core_riscv.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSStartup\startup_ch32v00x.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSSSystem\system_ch32v00x.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSDebug\debug.o
+Compiling .pio\build\hardware_apds_polling\FrameworkInitFini\cpp_support.o
+Compiling .pio\build\hardware_apds_polling\test\hardware\apds9960.o
+Compiling .pio\build\hardware_apds_polling\lib22a\src\i2c.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_adc.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_dbgmcu.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_dma.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_exti.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_flash.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_gpio.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_i2c.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_iwdg.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_misc.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_opa.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_pwr.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_rcc.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_spi.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_tim.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_usart.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_wwdg.o
+test\hardware\apds9960.c:23:17: warning: 'irq_mask' defined but not used [-Wunused-function]
+   23 | static uint32_t irq_mask(void) {
+      |                 ^~~~~~~~
+Archiving .pio\build\hardware_apds_polling\lib22a\libsrc.a
+Archiving .pio\build\hardware_apds_polling\libFrameworkNoneOSVariant.a
+Linking .pio\build\hardware_apds_polling\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\hardware_apds_polling/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\hardware_apds_polling/firmware.debug.lst
+Checking size .pio\build\hardware_apds_polling\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [==        ]  24.8% (used 508 bytes from 2048 bytes)
+Flash: [=======   ]  71.5% (used 11708 bytes from 16384 bytes)
+Configuring upload protocol...
+AVAILABLE: isp, minichlink, wch-link, wlink
+CURRENT: upload_protocol = wch-link
+Uploading .pio\build\hardware_apds_polling\firmware.elf
+Open On-Chip Debugger 0.11.0+dev-snapshot (2026-02-25-15:11)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+debug_level: 1
+
+Warn : Transport "sdi" was already selected
+Ready for Remote Connections
+[wch_riscv.cpu.0] Target successfully examined.
+** Programming Started **
+** Programming Finished **
+** Verify Started **
+** Verified OK **
+** Resetting Target **
+shutdown command invoked
+========================= [SUCCESS] Took 5.01 seconds =========================
+
+Environment            Status    Duration
+---------------------  --------  ------------
+hardware_apds_polling  SUCCESS   00:00:05.010
+========================= 1 succeeded in 00:00:05.010 =========================

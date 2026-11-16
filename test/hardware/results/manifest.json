@@ -1,0 +1,142 @@
+{
+  "library_version": "7.2.0",
+  "base_commit": "b43bebf73e4bbd6288c9ce84d1fbc3c0f4bf4bb2",
+  "uncommitted_changes": true,
+  "hardware": [
+    {
+      "started_utc": "2026-11-16T20:23:49.176267+00:00",
+      "environment": "hardware_apds",
+      "port": "COM6",
+      "upload_exit": 0,
+      "done_received": true,
+      "checks": 76788,
+      "failures": 0,
+      "id": 158,
+      "irq": 4266,
+      "max_ticks": 105440,
+      "datasheet_identity_match": false,
+      "transport_pass": true
+    },
+    {
+      "started_utc": "2026-11-16T20:26:59.317483+00:00",
+      "environment": "hardware_apds_polling",
+      "port": "COM6",
+      "upload_exit": 0,
+      "done_received": true,
+      "checks": 24558,
+      "failures": 0,
+      "id": 158,
+      "irq": 0,
+      "max_ticks": 105439,
+      "datasheet_identity_match": false,
+      "transport_pass": true
+    }
+  ],
+  "hardware_checks_total": 101346,
+  "host_counts": [
+    46,
+    46,
+    46,
+    46,
+    45,
+    43,
+    31,
+    43,
+    25,
+    25
+  ],
+  "host_test_functions_executed": 396,
+  "mutations_detected": 5,
+  "builds": [
+    {
+      "environment": "scanner",
+      "flash_bytes": 8416,
+      "RAM_data_bss_stack": 468
+    },
+    {
+      "environment": "benchmark_full",
+      "flash_bytes": 2536,
+      "RAM_data_bss_stack": 296
+    },
+    {
+      "environment": "benchmark_no_recovery",
+      "flash_bytes": 2076,
+      "RAM_data_bss_stack": 292
+    },
+    {
+      "environment": "benchmark_no_error_counter",
+      "flash_bytes": 2464,
+      "RAM_data_bss_stack": 296
+    },
+    {
+      "environment": "benchmark_no_buffer",
+      "flash_bytes": 2536,
+      "RAM_data_bss_stack": 296
+    },
+    {
+      "environment": "benchmark_lite",
+      "flash_bytes": 2076,
+      "RAM_data_bss_stack": 292
+    },
+    {
+      "environment": "allapi_full",
+      "flash_bytes": 2976,
+      "RAM_data_bss_stack": 296
+    },
+    {
+      "environment": "allapi_no_buffer",
+      "flash_bytes": 2684,
+      "RAM_data_bss_stack": 296
+    },
+    {
+      "environment": "allapi_no_scanner",
+      "flash_bytes": 2928,
+      "RAM_data_bss_stack": 296
+    },
+    {
+      "environment": "allapi_lite",
+      "flash_bytes": 2156,
+      "RAM_data_bss_stack": 292
+    },
+    {
+      "environment": "nolto_full",
+      "flash_bytes": 2800,
+      "RAM_data_bss_stack": 296
+    },
+    {
+      "environment": "nolto_lite",
+      "flash_bytes": 2200,
+      "RAM_data_bss_stack": 292
+    },
+    {
+      "environment": "hardware_apds",
+      "flash_bytes": 12220,
+      "RAM_data_bss_stack": 508
+    },
+    {
+      "environment": "hardware_apds_polling",
+      "flash_bytes": 11708,
+      "RAM_data_bss_stack": 508
+    }
+  ],
+  "flash_readback": {
+    "board_flash_sha256": "1d32f1a1b6e70cd74e4d34a57a06f38ae3b1ad64eb096ec620c1e4a91155cbcb",
+    "firmware_bin_sha256": "8c09ede589420e9b0da6d526def15c0b08b47be21fdc4aa97786cce7f58610e4",
+    "firmware_bytes": 11708,
+    "flash_matches_current_polling_build": true
+  },
+  "source_sha256": {
+    "src/i2c.c": "762a1178c8ded93c547ec53a4c5d3909ad7b34f5af01d7bb7b7c0c4f1b6dc815",
+    "src/i2c.h": "d7f2a386ba54c09d0310bc9eed4310a7ddb9a8b13de37ffe44979535e00a4818",
+    "platformio.ini": "faaa562dc6e9dbb2e57af11c8b93522b18dcd19fbcb24735f71a99027f8baaec",
+    "library.json": "3dfef0186d221c07d616015b9b2159bff41c7a51e75823d01bfcd0bfedb8c057",
+    "test/i2c_mock.cpp": "28ce7d1faee0fe0b4d1ff9684229d395d0ce0fe589490bee87c43d5c21f1e602",
+    "test/test_i2c.cpp": "dc18d08a77f343f066928bc7556ad1a558d0714958346f035a7be1d78068634f",
+    "test/hardware/apds9960.c": "8e855814a88b87c1bc619958bc3ccf5369e2a6933873aac9b24dd1c58fc84d7b",
+    "test/hardware/run_hil.py": "e0c219d474ab51ee936f874653badc3fbc3d8d7be4f21aad9a3f73599ef40b6f"
+  },
+  "firmware_sha256": {
+    "hardware_apds": "b4611c8665a94957635a99f776a46c20e9440ae84b7af7c10c4a31328b7a30ae",
+    "hardware_apds_polling": "8c09ede589420e9b0da6d526def15c0b08b47be21fdc4aa97786cce7f58610e4"
+  }
+}

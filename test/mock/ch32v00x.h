@@ -19,6 +19,7 @@
 #define MOCK_CH32V00X_H
 
 #include <stdint.h>
+#define I2C_TEST_IRQ_MODEL 1
 
 #ifndef __cplusplus
 #error "test/mock/ch32v00x.h requires a C++ compiler (register access is intercepted via operator overloading)"
@@ -50,6 +51,8 @@ uint32_t mock_reg_read(int id);
 void mock_reg_write(int id, uint32_t value);
 void mock_disable_irq(void);
 void mock_enable_irq(void);
+uint32_t mock_irq_save(void);
+void mock_irq_restore(uint32_t saved);
 extern uint32_t SystemCoreClock;
 }
 

@@ -1,0 +1,832 @@
+Processing scanner (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\scanner\FrameworkNoneOSCore\core_riscv.o
+Compiling .pio\build\scanner\FrameworkNoneOSStartup\startup_ch32v00x.o
+Compiling .pio\build\scanner\FrameworkNoneOSSSystem\system_ch32v00x.o
+Compiling .pio\build\scanner\FrameworkNoneOSDebug\debug.o
+Compiling .pio\build\scanner\FrameworkInitFini\cpp_support.o
+Compiling .pio\build\scanner\examples\i2c_scanner\src\main.o
+Compiling .pio\build\scanner\lib22a\src\i2c.o
+Compiling .pio\build\scanner\FrameworkNoneOSVariant\ch32v00x_adc.o
+Compiling .pio\build\scanner\FrameworkNoneOSVariant\ch32v00x_dbgmcu.o
+Compiling .pio\build\scanner\FrameworkNoneOSVariant\ch32v00x_dma.o
+Compiling .pio\build\scanner\FrameworkNoneOSVariant\ch32v00x_exti.o
+Compiling .pio\build\scanner\FrameworkNoneOSVariant\ch32v00x_flash.o
+Compiling .pio\build\scanner\FrameworkNoneOSVariant\ch32v00x_gpio.o
+Compiling .pio\build\scanner\FrameworkNoneOSVariant\ch32v00x_i2c.o
+Compiling .pio\build\scanner\FrameworkNoneOSVariant\ch32v00x_iwdg.o
+Compiling .pio\build\scanner\FrameworkNoneOSVariant\ch32v00x_misc.o
+Compiling .pio\build\scanner\FrameworkNoneOSVariant\ch32v00x_opa.o
+Compiling .pio\build\scanner\FrameworkNoneOSVariant\ch32v00x_pwr.o
+Compiling .pio\build\scanner\FrameworkNoneOSVariant\ch32v00x_rcc.o
+Compiling .pio\build\scanner\FrameworkNoneOSVariant\ch32v00x_spi.o
+Compiling .pio\build\scanner\FrameworkNoneOSVariant\ch32v00x_tim.o
+Compiling .pio\build\scanner\FrameworkNoneOSVariant\ch32v00x_usart.o
+Compiling .pio\build\scanner\FrameworkNoneOSVariant\ch32v00x_wwdg.o
+Archiving .pio\build\scanner\lib22a\libsrc.a
+Archiving .pio\build\scanner\libFrameworkNoneOSVariant.a
+Linking .pio\build\scanner\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\scanner/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\scanner/firmware.debug.lst
+Checking size .pio\build\scanner\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [==        ]  22.9% (used 468 bytes from 2048 bytes)
+Flash: [=====     ]  51.4% (used 8416 bytes from 16384 bytes)
+Building .pio\build\scanner\firmware.bin
+========================= [SUCCESS] Took 1.19 seconds =========================
+
+Processing benchmark_full (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\benchmark_full\FrameworkNoneOSCore\core_riscv.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSStartup\startup_ch32v00x.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSSSystem\system_ch32v00x.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSDebug\debug.o
+Compiling .pio\build\benchmark_full\FrameworkInitFini\cpp_support.o
+Compiling .pio\build\benchmark_full\examples\size_benchmark\src\main.o
+Compiling .pio\build\benchmark_full\lib22a\src\i2c.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSVariant\ch32v00x_adc.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSVariant\ch32v00x_dbgmcu.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSVariant\ch32v00x_dma.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSVariant\ch32v00x_exti.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSVariant\ch32v00x_flash.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSVariant\ch32v00x_gpio.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSVariant\ch32v00x_i2c.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSVariant\ch32v00x_iwdg.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSVariant\ch32v00x_misc.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSVariant\ch32v00x_opa.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSVariant\ch32v00x_pwr.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSVariant\ch32v00x_rcc.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSVariant\ch32v00x_spi.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSVariant\ch32v00x_tim.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSVariant\ch32v00x_usart.o
+Compiling .pio\build\benchmark_full\FrameworkNoneOSVariant\ch32v00x_wwdg.o
+Archiving .pio\build\benchmark_full\lib22a\libsrc.a
+Archiving .pio\build\benchmark_full\libFrameworkNoneOSVariant.a
+Linking .pio\build\benchmark_full\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\benchmark_full/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\benchmark_full/firmware.debug.lst
+Checking size .pio\build\benchmark_full\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  14.5% (used 296 bytes from 2048 bytes)
+Flash: [==        ]  15.5% (used 2536 bytes from 16384 bytes)
+Building .pio\build\benchmark_full\firmware.bin
+========================= [SUCCESS] Took 1.16 seconds =========================
+
+Processing benchmark_no_recovery (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSCore\core_riscv.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSStartup\startup_ch32v00x.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSSSystem\system_ch32v00x.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSDebug\debug.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkInitFini\cpp_support.o
+Compiling .pio\build\benchmark_no_recovery\examples\size_benchmark\src\main.o
+Compiling .pio\build\benchmark_no_recovery\lib22a\src\i2c.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSVariant\ch32v00x_adc.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSVariant\ch32v00x_dbgmcu.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSVariant\ch32v00x_dma.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSVariant\ch32v00x_exti.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSVariant\ch32v00x_flash.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSVariant\ch32v00x_gpio.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSVariant\ch32v00x_i2c.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSVariant\ch32v00x_iwdg.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSVariant\ch32v00x_misc.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSVariant\ch32v00x_opa.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSVariant\ch32v00x_pwr.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSVariant\ch32v00x_rcc.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSVariant\ch32v00x_spi.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSVariant\ch32v00x_tim.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSVariant\ch32v00x_usart.o
+Compiling .pio\build\benchmark_no_recovery\FrameworkNoneOSVariant\ch32v00x_wwdg.o
+Archiving .pio\build\benchmark_no_recovery\lib22a\libsrc.a
+Archiving .pio\build\benchmark_no_recovery\libFrameworkNoneOSVariant.a
+Linking .pio\build\benchmark_no_recovery\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\benchmark_no_recovery/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\benchmark_no_recovery/firmware.debug.lst
+Checking size .pio\build\benchmark_no_recovery\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  14.3% (used 292 bytes from 2048 bytes)
+Flash: [=         ]  12.7% (used 2076 bytes from 16384 bytes)
+Building .pio\build\benchmark_no_recovery\firmware.bin
+========================= [SUCCESS] Took 1.16 seconds =========================
+
+Processing benchmark_no_error_counter (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSCore\core_riscv.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSStartup\startup_ch32v00x.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSSSystem\system_ch32v00x.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSDebug\debug.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkInitFini\cpp_support.o
+Compiling .pio\build\benchmark_no_error_counter\examples\size_benchmark\src\main.o
+Compiling .pio\build\benchmark_no_error_counter\lib22a\src\i2c.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSVariant\ch32v00x_adc.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSVariant\ch32v00x_dbgmcu.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSVariant\ch32v00x_dma.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSVariant\ch32v00x_exti.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSVariant\ch32v00x_flash.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSVariant\ch32v00x_gpio.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSVariant\ch32v00x_i2c.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSVariant\ch32v00x_iwdg.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSVariant\ch32v00x_misc.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSVariant\ch32v00x_opa.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSVariant\ch32v00x_pwr.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSVariant\ch32v00x_rcc.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSVariant\ch32v00x_spi.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSVariant\ch32v00x_tim.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSVariant\ch32v00x_usart.o
+Compiling .pio\build\benchmark_no_error_counter\FrameworkNoneOSVariant\ch32v00x_wwdg.o
+Archiving .pio\build\benchmark_no_error_counter\lib22a\libsrc.a
+Archiving .pio\build\benchmark_no_error_counter\libFrameworkNoneOSVariant.a
+Linking .pio\build\benchmark_no_error_counter\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\benchmark_no_error_counter/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\benchmark_no_error_counter/firmware.debug.lst
+Checking size .pio\build\benchmark_no_error_counter\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  14.5% (used 296 bytes from 2048 bytes)
+Flash: [==        ]  15.0% (used 2464 bytes from 16384 bytes)
+Building .pio\build\benchmark_no_error_counter\firmware.bin
+========================= [SUCCESS] Took 1.22 seconds =========================
+
+Processing benchmark_no_buffer (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSCore\core_riscv.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSStartup\startup_ch32v00x.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSSSystem\system_ch32v00x.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSDebug\debug.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkInitFini\cpp_support.o
+Compiling .pio\build\benchmark_no_buffer\examples\size_benchmark\src\main.o
+Compiling .pio\build\benchmark_no_buffer\lib22a\src\i2c.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSVariant\ch32v00x_adc.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSVariant\ch32v00x_dbgmcu.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSVariant\ch32v00x_dma.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSVariant\ch32v00x_exti.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSVariant\ch32v00x_flash.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSVariant\ch32v00x_gpio.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSVariant\ch32v00x_i2c.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSVariant\ch32v00x_iwdg.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSVariant\ch32v00x_misc.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSVariant\ch32v00x_opa.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSVariant\ch32v00x_pwr.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSVariant\ch32v00x_rcc.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSVariant\ch32v00x_spi.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSVariant\ch32v00x_tim.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSVariant\ch32v00x_usart.o
+Compiling .pio\build\benchmark_no_buffer\FrameworkNoneOSVariant\ch32v00x_wwdg.o
+Archiving .pio\build\benchmark_no_buffer\lib22a\libsrc.a
+Archiving .pio\build\benchmark_no_buffer\libFrameworkNoneOSVariant.a
+Linking .pio\build\benchmark_no_buffer\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\benchmark_no_buffer/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\benchmark_no_buffer/firmware.debug.lst
+Checking size .pio\build\benchmark_no_buffer\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  14.5% (used 296 bytes from 2048 bytes)
+Flash: [==        ]  15.5% (used 2536 bytes from 16384 bytes)
+Building .pio\build\benchmark_no_buffer\firmware.bin
+========================= [SUCCESS] Took 1.19 seconds =========================
+
+Processing benchmark_lite (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSCore\core_riscv.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSStartup\startup_ch32v00x.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSSSystem\system_ch32v00x.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSDebug\debug.o
+Compiling .pio\build\benchmark_lite\FrameworkInitFini\cpp_support.o
+Compiling .pio\build\benchmark_lite\examples\size_benchmark\src\main.o
+Compiling .pio\build\benchmark_lite\lib22a\src\i2c.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSVariant\ch32v00x_adc.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSVariant\ch32v00x_dbgmcu.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSVariant\ch32v00x_dma.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSVariant\ch32v00x_exti.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSVariant\ch32v00x_flash.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSVariant\ch32v00x_gpio.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSVariant\ch32v00x_i2c.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSVariant\ch32v00x_iwdg.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSVariant\ch32v00x_misc.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSVariant\ch32v00x_opa.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSVariant\ch32v00x_pwr.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSVariant\ch32v00x_rcc.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSVariant\ch32v00x_spi.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSVariant\ch32v00x_tim.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSVariant\ch32v00x_usart.o
+Compiling .pio\build\benchmark_lite\FrameworkNoneOSVariant\ch32v00x_wwdg.o
+Archiving .pio\build\benchmark_lite\lib22a\libsrc.a
+Archiving .pio\build\benchmark_lite\libFrameworkNoneOSVariant.a
+Linking .pio\build\benchmark_lite\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\benchmark_lite/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\benchmark_lite/firmware.debug.lst
+Checking size .pio\build\benchmark_lite\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  14.3% (used 292 bytes from 2048 bytes)
+Flash: [=         ]  12.7% (used 2076 bytes from 16384 bytes)
+Building .pio\build\benchmark_lite\firmware.bin
+========================= [SUCCESS] Took 1.20 seconds =========================
+
+Processing allapi_full (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\allapi_full\FrameworkNoneOSCore\core_riscv.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSStartup\startup_ch32v00x.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSSSystem\system_ch32v00x.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSDebug\debug.o
+Compiling .pio\build\allapi_full\FrameworkInitFini\cpp_support.o
+Compiling .pio\build\allapi_full\examples\size_benchmark\src\main_allapi.o
+Compiling .pio\build\allapi_full\lib22a\src\i2c.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSVariant\ch32v00x_adc.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSVariant\ch32v00x_dbgmcu.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSVariant\ch32v00x_dma.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSVariant\ch32v00x_exti.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSVariant\ch32v00x_flash.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSVariant\ch32v00x_gpio.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSVariant\ch32v00x_i2c.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSVariant\ch32v00x_iwdg.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSVariant\ch32v00x_misc.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSVariant\ch32v00x_opa.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSVariant\ch32v00x_pwr.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSVariant\ch32v00x_rcc.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSVariant\ch32v00x_spi.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSVariant\ch32v00x_tim.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSVariant\ch32v00x_usart.o
+Compiling .pio\build\allapi_full\FrameworkNoneOSVariant\ch32v00x_wwdg.o
+Archiving .pio\build\allapi_full\lib22a\libsrc.a
+Archiving .pio\build\allapi_full\libFrameworkNoneOSVariant.a
+Linking .pio\build\allapi_full\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\allapi_full/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\allapi_full/firmware.debug.lst
+Checking size .pio\build\allapi_full\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  14.5% (used 296 bytes from 2048 bytes)
+Flash: [==        ]  18.2% (used 2976 bytes from 16384 bytes)
+Building .pio\build\allapi_full\firmware.bin
+========================= [SUCCESS] Took 1.22 seconds =========================
+
+Processing allapi_no_buffer (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSCore\core_riscv.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSStartup\startup_ch32v00x.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSSSystem\system_ch32v00x.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSDebug\debug.o
+Compiling .pio\build\allapi_no_buffer\FrameworkInitFini\cpp_support.o
+Compiling .pio\build\allapi_no_buffer\examples\size_benchmark\src\main_allapi.o
+Compiling .pio\build\allapi_no_buffer\lib22a\src\i2c.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSVariant\ch32v00x_adc.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSVariant\ch32v00x_dbgmcu.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSVariant\ch32v00x_dma.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSVariant\ch32v00x_exti.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSVariant\ch32v00x_flash.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSVariant\ch32v00x_gpio.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSVariant\ch32v00x_i2c.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSVariant\ch32v00x_iwdg.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSVariant\ch32v00x_misc.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSVariant\ch32v00x_opa.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSVariant\ch32v00x_pwr.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSVariant\ch32v00x_rcc.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSVariant\ch32v00x_spi.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSVariant\ch32v00x_tim.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSVariant\ch32v00x_usart.o
+Compiling .pio\build\allapi_no_buffer\FrameworkNoneOSVariant\ch32v00x_wwdg.o
+Archiving .pio\build\allapi_no_buffer\lib22a\libsrc.a
+Archiving .pio\build\allapi_no_buffer\libFrameworkNoneOSVariant.a
+Linking .pio\build\allapi_no_buffer\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\allapi_no_buffer/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\allapi_no_buffer/firmware.debug.lst
+Checking size .pio\build\allapi_no_buffer\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  14.5% (used 296 bytes from 2048 bytes)
+Flash: [==        ]  16.4% (used 2684 bytes from 16384 bytes)
+Building .pio\build\allapi_no_buffer\firmware.bin
+========================= [SUCCESS] Took 1.18 seconds =========================
+
+Processing allapi_no_scanner (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSCore\core_riscv.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSStartup\startup_ch32v00x.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSSSystem\system_ch32v00x.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSDebug\debug.o
+Compiling .pio\build\allapi_no_scanner\FrameworkInitFini\cpp_support.o
+Compiling .pio\build\allapi_no_scanner\examples\size_benchmark\src\main_allapi.o
+Compiling .pio\build\allapi_no_scanner\lib22a\src\i2c.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSVariant\ch32v00x_adc.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSVariant\ch32v00x_dbgmcu.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSVariant\ch32v00x_dma.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSVariant\ch32v00x_exti.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSVariant\ch32v00x_flash.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSVariant\ch32v00x_gpio.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSVariant\ch32v00x_i2c.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSVariant\ch32v00x_iwdg.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSVariant\ch32v00x_misc.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSVariant\ch32v00x_opa.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSVariant\ch32v00x_pwr.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSVariant\ch32v00x_rcc.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSVariant\ch32v00x_spi.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSVariant\ch32v00x_tim.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSVariant\ch32v00x_usart.o
+Compiling .pio\build\allapi_no_scanner\FrameworkNoneOSVariant\ch32v00x_wwdg.o
+Archiving .pio\build\allapi_no_scanner\lib22a\libsrc.a
+Archiving .pio\build\allapi_no_scanner\libFrameworkNoneOSVariant.a
+Linking .pio\build\allapi_no_scanner\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\allapi_no_scanner/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\allapi_no_scanner/firmware.debug.lst
+Checking size .pio\build\allapi_no_scanner\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  14.5% (used 296 bytes from 2048 bytes)
+Flash: [==        ]  17.9% (used 2928 bytes from 16384 bytes)
+Building .pio\build\allapi_no_scanner\firmware.bin
+========================= [SUCCESS] Took 1.25 seconds =========================
+
+Processing allapi_lite (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\allapi_lite\FrameworkNoneOSCore\core_riscv.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSStartup\startup_ch32v00x.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSSSystem\system_ch32v00x.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSDebug\debug.o
+Compiling .pio\build\allapi_lite\FrameworkInitFini\cpp_support.o
+Compiling .pio\build\allapi_lite\examples\size_benchmark\src\main_allapi.o
+Compiling .pio\build\allapi_lite\lib22a\src\i2c.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSVariant\ch32v00x_adc.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSVariant\ch32v00x_dbgmcu.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSVariant\ch32v00x_dma.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSVariant\ch32v00x_exti.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSVariant\ch32v00x_flash.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSVariant\ch32v00x_gpio.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSVariant\ch32v00x_i2c.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSVariant\ch32v00x_iwdg.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSVariant\ch32v00x_misc.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSVariant\ch32v00x_opa.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSVariant\ch32v00x_pwr.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSVariant\ch32v00x_rcc.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSVariant\ch32v00x_spi.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSVariant\ch32v00x_tim.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSVariant\ch32v00x_usart.o
+Compiling .pio\build\allapi_lite\FrameworkNoneOSVariant\ch32v00x_wwdg.o
+Archiving .pio\build\allapi_lite\lib22a\libsrc.a
+Archiving .pio\build\allapi_lite\libFrameworkNoneOSVariant.a
+Linking .pio\build\allapi_lite\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\allapi_lite/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\allapi_lite/firmware.debug.lst
+Checking size .pio\build\allapi_lite\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  14.3% (used 292 bytes from 2048 bytes)
+Flash: [=         ]  13.2% (used 2156 bytes from 16384 bytes)
+Building .pio\build\allapi_lite\firmware.bin
+========================= [SUCCESS] Took 1.17 seconds =========================
+
+Processing nolto_full (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\nolto_full\FrameworkNoneOSCore\core_riscv.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSStartup\startup_ch32v00x.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSSSystem\system_ch32v00x.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSDebug\debug.o
+Compiling .pio\build\nolto_full\FrameworkInitFini\cpp_support.o
+Compiling .pio\build\nolto_full\examples\size_benchmark\src\main.o
+Compiling .pio\build\nolto_full\lib22a\src\i2c.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSVariant\ch32v00x_adc.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSVariant\ch32v00x_dbgmcu.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSVariant\ch32v00x_dma.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSVariant\ch32v00x_exti.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSVariant\ch32v00x_flash.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSVariant\ch32v00x_gpio.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSVariant\ch32v00x_i2c.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSVariant\ch32v00x_iwdg.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSVariant\ch32v00x_misc.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSVariant\ch32v00x_opa.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSVariant\ch32v00x_pwr.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSVariant\ch32v00x_rcc.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSVariant\ch32v00x_spi.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSVariant\ch32v00x_tim.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSVariant\ch32v00x_usart.o
+Compiling .pio\build\nolto_full\FrameworkNoneOSVariant\ch32v00x_wwdg.o
+Archiving .pio\build\nolto_full\lib22a\libsrc.a
+Archiving .pio\build\nolto_full\libFrameworkNoneOSVariant.a
+Linking .pio\build\nolto_full\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\nolto_full/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\nolto_full/firmware.debug.lst
+Checking size .pio\build\nolto_full\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  14.5% (used 296 bytes from 2048 bytes)
+Flash: [==        ]  17.1% (used 2800 bytes from 16384 bytes)
+Building .pio\build\nolto_full\firmware.bin
+========================= [SUCCESS] Took 1.12 seconds =========================
+
+Processing nolto_lite (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\nolto_lite\FrameworkNoneOSCore\core_riscv.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSStartup\startup_ch32v00x.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSSSystem\system_ch32v00x.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSDebug\debug.o
+Compiling .pio\build\nolto_lite\FrameworkInitFini\cpp_support.o
+Compiling .pio\build\nolto_lite\examples\size_benchmark\src\main.o
+Compiling .pio\build\nolto_lite\lib22a\src\i2c.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_adc.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_dbgmcu.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_dma.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_exti.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_flash.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_gpio.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_i2c.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_iwdg.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_misc.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_opa.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_pwr.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_rcc.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_spi.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_tim.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_usart.o
+Compiling .pio\build\nolto_lite\FrameworkNoneOSVariant\ch32v00x_wwdg.o
+Archiving .pio\build\nolto_lite\lib22a\libsrc.a
+Archiving .pio\build\nolto_lite\libFrameworkNoneOSVariant.a
+Linking .pio\build\nolto_lite\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\nolto_lite/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\nolto_lite/firmware.debug.lst
+Checking size .pio\build\nolto_lite\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  14.3% (used 292 bytes from 2048 bytes)
+Flash: [=         ]  13.4% (used 2200 bytes from 16384 bytes)
+Building .pio\build\nolto_lite\firmware.bin
+========================= [SUCCESS] Took 1.14 seconds =========================
+
+Processing hardware_apds (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\hardware_apds\FrameworkNoneOSCore\core_riscv.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSStartup\startup_ch32v00x.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSSSystem\system_ch32v00x.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSDebug\debug.o
+Compiling .pio\build\hardware_apds\FrameworkInitFini\cpp_support.o
+Compiling .pio\build\hardware_apds\test\hardware\apds9960.o
+Compiling .pio\build\hardware_apds\lib22a\src\i2c.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSVariant\ch32v00x_adc.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSVariant\ch32v00x_dbgmcu.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSVariant\ch32v00x_dma.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSVariant\ch32v00x_exti.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSVariant\ch32v00x_flash.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSVariant\ch32v00x_gpio.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSVariant\ch32v00x_i2c.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSVariant\ch32v00x_iwdg.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSVariant\ch32v00x_misc.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSVariant\ch32v00x_opa.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSVariant\ch32v00x_pwr.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSVariant\ch32v00x_rcc.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSVariant\ch32v00x_spi.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSVariant\ch32v00x_tim.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSVariant\ch32v00x_usart.o
+Compiling .pio\build\hardware_apds\FrameworkNoneOSVariant\ch32v00x_wwdg.o
+Archiving .pio\build\hardware_apds\lib22a\libsrc.a
+Archiving .pio\build\hardware_apds\libFrameworkNoneOSVariant.a
+Linking .pio\build\hardware_apds\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\hardware_apds/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\hardware_apds/firmware.debug.lst
+Checking size .pio\build\hardware_apds\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [==        ]  24.8% (used 508 bytes from 2048 bytes)
+Flash: [=======   ]  74.6% (used 12220 bytes from 16384 bytes)
+Building .pio\build\hardware_apds\firmware.bin
+========================= [SUCCESS] Took 1.29 seconds =========================
+
+Processing hardware_apds_polling (platform: https://github.com/Community-PIO-CH32V/platform-ch32v.git; board: genericCH32V003F4P6; framework: noneos-sdk)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ch32v/genericCH32V003F4P6.html
+PLATFORM: WCH CH32V (1.1.0+sha.499971a) > Generic CH32V003F4P6
+HARDWARE: CH32V003F4P6 48MHz, 2KB RAM, 16KB Flash
+DEBUG: Current (wch-link) On-board (wch-link) External (minichlink)
+PACKAGES: 
+ - framework-wch-noneos-sdk @ 2.30000.0+sha.34b1b78 
+ - tool-openocd-riscv-wch @ 2.1100.260228 (11.0) 
+ - tool-wlink @ 0.23.241116+sha.f44158e 
+ - toolchain-riscv @ 1.120200.220829+sha.d283639
+Clock configuration:
+  Source: hsi+pll
+  Frequency: 48000000 Hz
+  Macro: SYSCLK_FREQ_48MHz_HSI=48000000
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 11 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- src
+Building in release mode
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSCore\core_riscv.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSStartup\startup_ch32v00x.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSSSystem\system_ch32v00x.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSDebug\debug.o
+Compiling .pio\build\hardware_apds_polling\FrameworkInitFini\cpp_support.o
+Compiling .pio\build\hardware_apds_polling\test\hardware\apds9960.o
+Compiling .pio\build\hardware_apds_polling\lib22a\src\i2c.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_adc.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_dbgmcu.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_dma.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_exti.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_flash.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_gpio.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_i2c.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_iwdg.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_misc.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_opa.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_pwr.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_rcc.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_spi.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_tim.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_usart.o
+Compiling .pio\build\hardware_apds_polling\FrameworkNoneOSVariant\ch32v00x_wwdg.o
+test\hardware\apds9960.c:23:17: warning: 'irq_mask' defined but not used [-Wunused-function]
+   23 | static uint32_t irq_mask(void) {
+      |                 ^~~~~~~~
+Archiving .pio\build\hardware_apds_polling\lib22a\libsrc.a
+Archiving .pio\build\hardware_apds_polling\libFrameworkNoneOSVariant.a
+Linking .pio\build\hardware_apds_polling\firmware.elf
+Building E:\GitProjects\I2C-CH32V003\.pio\build\hardware_apds_polling/firmware.lst
+Building E:\GitProjects\I2C-CH32V003\.pio\build\hardware_apds_polling/firmware.debug.lst
+Checking size .pio\build\hardware_apds_polling\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [==        ]  24.8% (used 508 bytes from 2048 bytes)
+Flash: [=======   ]  71.5% (used 11708 bytes from 16384 bytes)
+Building .pio\build\hardware_apds_polling\firmware.bin
+========================= [SUCCESS] Took 1.29 seconds =========================
+
+Environment                 Status    Duration
+--------------------------  --------  ------------
+scanner                     SUCCESS   00:00:01.193
+benchmark_full              SUCCESS   00:00:01.165
+benchmark_no_recovery       SUCCESS   00:00:01.164
+benchmark_no_error_counter  SUCCESS   00:00:01.224
+benchmark_no_buffer         SUCCESS   00:00:01.187
+benchmark_lite              SUCCESS   00:00:01.200
+allapi_full                 SUCCESS   00:00:01.219
+allapi_no_buffer            SUCCESS   00:00:01.183
+allapi_no_scanner           SUCCESS   00:00:01.246
+allapi_lite                 SUCCESS   00:00:01.171
+nolto_full                  SUCCESS   00:00:01.120
+nolto_lite                  SUCCESS   00:00:01.139
+hardware_apds               SUCCESS   00:00:01.294
+hardware_apds_polling       SUCCESS   00:00:01.293
+========================= 14 succeeded in 00:00:16.799 =========================

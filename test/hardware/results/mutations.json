@@ -1,0 +1,32 @@
+[
+  {
+    "mutation": "ready_before_error",
+    "test_exit": 1,
+    "detected": true,
+    "failed_checks": 4
+  },
+  {
+    "mutation": "ignore_probe_stop",
+    "test_exit": 1,
+    "detected": true,
+    "failed_checks": 1
+  },
+  {
+    "mutation": "floor_ccr",
+    "test_exit": 1,
+    "detected": true,
+    "failed_checks": 12
+  },
+  {
+    "mutation": "no_pos_for_two",
+    "test_exit": 1,
+    "detected": true,
+    "failed_checks": 20
+  },
+  {
+    "mutation": "enable_incoming_disabled_irq",
+    "test_exit": 1,
+    "detected": true,
+    "failed_checks": 6
+  }
+]
